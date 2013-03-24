@@ -13,6 +13,7 @@ from pyramid.paster import (
 from ..models import (
     DBSession,
     Package,
+    Release,
     Base,
 )
 
