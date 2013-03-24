@@ -5,7 +5,7 @@ from pyramid.view import view_config
 from pyramid.response import FileResponse
 from pyramid.i18n import TranslationStringFactory
 
-_ = TranslationStringFactory('circle')
+_ = TranslationStringFactory('belt')
 
 
 def path_to_name(path, bundle):

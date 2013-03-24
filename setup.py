@@ -8,9 +8,9 @@ CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 
 requires = ['pyramid>=1.0.2', 'pyramid_jinja2']
 
-setup(name='circle',
+setup(name='belt',
       version='0.0',
-      description='circle',
+      description='belt',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
           "Programming Language :: Python",
@@ -27,10 +27,10 @@ setup(name='circle',
       zip_safe=False,
       install_requires=requires,
       tests_require=requires,
-      test_suite="circle",
+      test_suite="belt",
       entry_points="""\
       [paste.app_factory]
-      main = circle:main
+      main = belt:main
       """,
       paster_plugins=['pyramid'],
       )

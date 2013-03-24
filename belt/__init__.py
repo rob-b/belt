@@ -9,7 +9,7 @@ def main(global_config, **settings):
     ``paster serve``.
     """
     settings = dict(settings)
-    settings.setdefault('jinja2.i18n.domain', 'circle')
+    settings.setdefault('jinja2.i18n.domain', 'belt')
 
     config = Configurator(settings=settings)
     config.add_translation_dirs('locale/')
@@ -20,9 +20,9 @@ def main(global_config, **settings):
     config.add_route('simple_name', '/simple/{name}')
 
     # config.add_route('simple_package', '/*subpath')
-    # config.add_view('circle.static.static_view', route_name='simple_package')
+    # config.add_view('belt.static.static_view', route_name='simple_package')
 
-    config.scan('circle')
+    config.scan('belt')
     config.add_renderer('.html', renderer_factory)
 
     return config.make_wsgi_app()
