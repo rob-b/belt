@@ -1,3 +1,4 @@
+import os
 import fudge
 import pytest
 
@@ -28,7 +29,7 @@ class TestPipCacheToPackages(object):
         pip_cached_packages.expects_call().returns(fullnames)
 
         packages = pip_cache_to_packages()
-        assert packages['argparse'].path == '/foo/quux'
+        assert packages['argparse'][0].path == '/foo/quux'
 
     @fudge.patch('belt.views.pip_cached_packages')
     def test_matches_package_names_with_dots(self, pip_cached_packages):
@@ -53,13 +54,53 @@ class TestPipCacheToPackages(object):
         pip_cached_packages.expects_call().returns(fullnames)
 
         packages = pip_cache_to_packages()
-        assert packages['zope.interface'] == ['4.0.1', '4.0.3']
+        versions = [vers.number for vers in packages['zope.interface']]
+        assert versions == ['4.0.1', '4.0.3']
+
+    @fudge.patch('belt.views.pip_cached_packages')
+    def test_excludes_content_type_file(self, pip_cached_packages):
+        from belt.views import pip_cache_to_packages
+        keep = ('/.pip-cache/git-sweep-0.1.1.tar.gz',
+                'git-sweep-0.1.1.tar.gz')
+        discard = ('/.pip-cache/git-sweep-0.1.1.tar.gz.content-type',
+                   'git-sweep-0.1.1.tar.gz.content-type')
+        pip_cached_packages.expects_call().returns((keep, discard))
+
+        packages = pip_cache_to_packages()
+        version = packages['git-sweep']
+        assert len(version) == 1
+
+    @fudge.patch('belt.views.pip_cached_packages')
+    def test_excludes_content_type_file_2(self, pip_cached_packages):
+        from belt.views import pip_cache_to_packages
+        keep = ('/.pip-cache/git-sweep-0.1.1.tar.gz',
+                'git-sweep-0.1.1.tar.gz')
+        discard = ('/.pip-cache/git-sweep-0.1.1.tar.gz.content-type',
+                   'git-sweep-0.1.1.tar.gz.content-type')
+        pip_cached_packages.expects_call().returns((keep, discard))
+
+        packages = pip_cache_to_packages()
+        version, = packages['git-sweep']
+        assert version.number == '0.1.1'
 
 
-def test_read_pip_cache():
-    from belt.views import pip_cached_packages
-    package = list(pip_cached_packages())[0]
-    assert len(package) == 2
+class TestPipCacheAccess(object):
+
+    @classmethod
+    def setup_class(cls):
+        cls._original_cache_path = os.environ.get('PIP_DOWNLOAD_CACHE')
+        # os.environ['PIP_DOWNLOAD_CACHE'] = ''
+
+    @classmethod
+    def teardown_class(cls):
+        os.environ['PIP_DOWNLOAD_CACHE'] = cls._original_cache_path
+
+    def test_read_pip_cache(self, tmpdir):
+        from belt.views import pip_cached_packages
+        tarball = tmpdir.join('foo.tar.gz')
+        tarball.write('yikes!')
+        package = list(pip_cached_packages(tarball.dirname))[0]
+        assert len(package) == 2
 
 
 def test_obtain_name():
@@ -93,17 +134,3 @@ def test_keyerror_if_missing_name():
     from belt.views import name_to_path
     with pytest.raises(KeyError):
         name_to_path('', [])
-
-
-def test_pip_cached_packages_is_unfiltered():
-    from belt.views import pip_cached_packages
-    names = (name for path, name in pip_cached_packages() if
-             name.endswith('content-type'))
-    assert next(names, 'no matches') != 'no matches'
-
-
-def test_filter_packages_removes_non_archives():
-    from belt.views import pip_cached_packages, filter_packages
-    filtered = filter_packages(pip_cached_packages())
-    names = (name for path, name in filtered if name.endswith('content-type'))
-    assert next(names, 'no matches') == 'no matches'

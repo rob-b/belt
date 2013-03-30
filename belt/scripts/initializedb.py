@@ -15,7 +15,10 @@ from ..models import (
     Package,
     Release,
     Base,
+    seed_packages,
 )
+
+from ..views import pip_cache_to_packages
 
 
 def usage(argv):
@@ -35,5 +38,5 @@ def main(argv=sys.argv):
     DBSession.configure(bind=engine)
     Base.metadata.create_all(engine)
     with transaction.manager:
-        model = Package(name='one')
-        DBSession.add(model)
+        for pkg in seed_packages(pip_cache_to_packages()):
+            DBSession.add(pkg)

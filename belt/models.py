@@ -19,6 +19,9 @@ class Package(Base):
     def __init__(self, name):
         self.name = name
 
+    def __repr__(self):
+        return u'package: {}'.format(self.name)
+
 
 class Release(Base):
     __tablename__ = 'release'
@@ -26,9 +29,23 @@ class Release(Base):
     local = Column(Boolean, default=True)
     package_id = Column(Integer, ForeignKey('package.id'))
     version = Column(Text)
-    path = Column(Text)
+    path = Column(Text, unique=True)
 
     def __init__(self, version, path=None, local=True):
         self.local = local
         self.version = version
         self.path = path
+
+    def __repr__(self):
+        return u'release: {}-{}'.format(self.package.name, self.version)
+
+
+def seed_packages(package_proxies):
+
+    packages = []
+    for name, versions in package_proxies.items():
+        package = Package(name=name)
+        for version in versions:
+            package.releases.append(Release(version.number, path=version.path))
+        packages.append(package)
+    return packages

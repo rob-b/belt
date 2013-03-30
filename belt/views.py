@@ -14,13 +14,28 @@ _ = TranslationStringFactory('belt')
 log = logging.getLogger(__name__)
 
 
-class PackageProxy(list):
-    path = None
+known_extensions = ['.tar.gz', '.zip']
 
 
-def pip_cache_to_packages():
+Version = collections.namedtuple('Version', ['number', 'path'])
+
+
+def compose(*functions):
+    def composed(arg):
+        return reduce(lambda a, f: f(a), [arg] + list(functions))
+    return composed
+
+
+def filter_packages(packages):
+    for path, name in packages:
+        if name.endswith('.content-type'):
+            continue
+        yield path, name
+
+
+def pip_cache_to_packages(cache_dir=None):
     bare_packages = []
-    for path, package in pip_cached_packages():
+    for path, package in filter_packages(pip_cached_packages(cache_dir)):
         for ext in known_extensions:
             if package.endswith(ext):
                 package = package.replace(ext, '')
@@ -29,17 +44,15 @@ def pip_cache_to_packages():
 
     version_regex = re.compile('^([\w\.-]+)-((?:\d+\.?){1,3})')
 
-    packages = collections.defaultdict(PackageProxy)
+    packages = collections.defaultdict(list)
     for path, package in bare_packages:
         match = version_regex.match(package)
 
         if match:
             name, version = match.groups()
-            packages[name].append(version)
         else:
-            name = package
-            packages[name].append(None)
-        packages[name].path = path
+            name, version = package, None
+        packages[name].append(Version(version, path))
 
         if not match:
             log.error('{} has a badly formatted version'.format(package))
@@ -58,25 +71,13 @@ def pip_cache_path():
     return os.path.expanduser(os.environ['PIP_DOWNLOAD_CACHE'])
 
 
-def compose(*functions):
-    def composed(arg):
-        return reduce(lambda a, f: f(a), [arg] + list(functions))
-    return composed
-
-
 def pip_cached_packages(pip_cache_dir=None):
     pip_cache_dir = pip_cache_dir or pip_cache_path()
-    packages = glob.iglob('{}/*'.format(pip_cache_dir))
+    assert os.path.exists(pip_cache_dir)
     composed = compose(urllib2.unquote, os.path.basename)
+
+    packages = glob.iglob('{}/*'.format(pip_cache_dir))
     return ((package, composed(package)) for package in packages)
-
-
-def filter_packages(packages):
-    return ((path, package) for path, package in packages if not
-            path.endswith('content-type'))
-
-
-known_extensions = ['.tar.gz', '.zip']
 
 
 @view_config(route_name='simple', renderer='simple.html')
@@ -87,6 +88,7 @@ def simple_list(request):
 @view_config(route_name='package_list')
 def packages(request):
     name = request.matchdict['package']
+    assert False, name
 
 
 def download(request):
