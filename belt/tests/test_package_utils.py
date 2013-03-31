@@ -2,6 +2,7 @@ import os.path
 import urllib2
 import cStringIO
 import py.test
+from hashlib import md5
 from httpretty import HTTPretty, httprettified
 
 
@@ -28,6 +29,26 @@ def test_get_dir_for_package(tmpdir):
     yolk.write('1')
     package_dir = str(tmpdir)
     assert ['yolk.1.0.1.tar.gz'] == local_versions(package_dir, 'yolk')
+
+
+def test_local_versions_excludes_hash_files(tmpdir):
+    from ..utils import local_versions
+    yolk = tmpdir.mkdir('yolk').join('yolk.1.0.1.tar.gz.md5')
+    yolk.write('')
+    package_dir = str(tmpdir)
+    assert [] == local_versions(package_dir, 'yolk')
+
+
+def test_local_versions_has_md5_attr(tmpdir):
+    from ..utils import local_versions
+    p = tmpdir.join('somename.exe')
+    p.write('')
+
+    p = tmpdir.join('somename.exe.md5')
+    p.write('HASHED CONTENT')
+    package_dir = str(tmpdir)
+    local, = local_versions(package_dir, '')
+    assert 'HASHED CONTENT' == local.md5
 
 
 def test_returns_empty_list_if_no_local_versions(tmpdir):
@@ -80,13 +101,25 @@ class TestStoreLocally(object):
         with open(destination) as output:
             assert 'path making' == output.read()
 
+    def test_creates_md5_of_package(self, tmpdir):
+        from ..utils import store_locally
+
+        destination = os.path.join(str(tmpdir), 'baz-1.zip')
+        fo = cStringIO.StringIO()
+        fo.write('sOmE cOnTeNt')
+        fo.seek(0)
+
+        store_locally(destination, fo)
+        with open(destination + '.md5') as hashed:
+            assert md5('sOmE cOnTeNt').hexdigest() == hashed.read()
+
 
 class TestGetPackageFromPypi(object):
 
     @httprettified
     def test_get_package_from_pypi(self):
         from ..utils import get_package_from_pypi, pypi_url
-        pypi_base_url = 'https://pypi.python.org/simple'
+        pypi_base_url = 'https://pypi.python.org/packages'
         url = pypi_url(pypi_base_url, 'source', 'f', 'flake8',
                        'flake8-2.0.tar.gz')
 
@@ -97,7 +130,7 @@ class TestGetPackageFromPypi(object):
     @httprettified
     def test_breaks_on_404(self):
         from ..utils import get_package_from_pypi, pypi_url
-        pypi_base_url = 'https://pypi.python.org/simple'
+        pypi_base_url = 'https://pypi.python.org/packages'
         url = pypi_url(pypi_base_url, 'source', 'f', 'flake8',
                        'flake8-2.0.tar.gz')
 

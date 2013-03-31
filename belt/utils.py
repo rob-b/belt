@@ -1,6 +1,10 @@
 import os
 import urllib2
 import logging
+from hashlib import md5
+
+
+logger = logging.getLogger(__name__)
 
 
 class Path(object):
@@ -11,6 +15,34 @@ class Path(object):
     @property
     def exists(self):
         return os.path.exists(self.path)
+
+
+class Version(object):
+
+    _md5 = ''
+
+    def __init__(self, name, package_dir):
+        self.name = name
+        self.package_dir = package_dir
+
+    def __eq__(self, other):
+        return self.name == other
+
+    def __repr__(self):
+        return self.name
+
+    @property
+    def md5(self):
+        if not self._md5:
+
+            hash_name = os.path.join(self.package_dir, self.name) + '.md5'
+            try:
+                with open(hash_name) as hashed:
+                    self._md5 = hashed.read()
+            except IOError:
+                msg = u'{} does not exist'.format(hash_name)
+                logging.exception(msg)
+        return self._md5
 
 
 logger = logging.getLogger(__name__)
@@ -24,7 +56,8 @@ def local_packages(packages_root):
 
 def local_versions(packages_root, package_name):
     package_dir = os.path.join(packages_root, package_name)
-    return os.listdir(package_dir) if os.path.exists(package_dir) else []
+    candidates = os.listdir(package_dir) if os.path.exists(package_dir) else []
+    return [Version(version, package_dir) for version in candidates if not version.endswith('.md5')]
 
 
 def get_package(packages_root, package_name, package_version):
@@ -56,3 +89,7 @@ def store_locally(path, fo):
         os.makedirs(dirname)
     with open(path, 'w') as package:
         package.write(fo.read())
+
+    with open(path) as package:
+        with open(path + '.md5', 'w') as hashed:
+            hashed.write(md5(package.read()).hexdigest())
