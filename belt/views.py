@@ -1,12 +1,9 @@
-import re
-import os
-import glob
-import urllib2
 import logging
-import collections
 from pyramid.view import view_config
-from pyramid.response import FileResponse
 from pyramid.i18n import TranslationStringFactory
+from pyramid.response import FileResponse
+
+from .utils import local_packages, local_versions, get_package
 
 _ = TranslationStringFactory('belt')
 
@@ -14,84 +11,23 @@ _ = TranslationStringFactory('belt')
 log = logging.getLogger(__name__)
 
 
-known_extensions = ['.tar.gz', '.zip']
-
-
-Version = collections.namedtuple('Version', ['number', 'path'])
-
-
-def compose(*functions):
-    def composed(arg):
-        return reduce(lambda a, f: f(a), [arg] + list(functions))
-    return composed
-
-
-def filter_packages(packages):
-    for path, name in packages:
-        if name.endswith('.content-type'):
-            continue
-        yield path, name
-
-
-def pip_cache_to_packages(cache_dir=None):
-    bare_packages = []
-    for path, package in filter_packages(pip_cached_packages(cache_dir)):
-        for ext in known_extensions:
-            if package.endswith(ext):
-                package = package.replace(ext, '')
-                break
-        bare_packages.append((path, package))
-
-    version_regex = re.compile('^([\w\.-]+)-((?:\d+\.?){1,3})')
-
-    packages = collections.defaultdict(list)
-    for path, package in bare_packages:
-        match = version_regex.match(package)
-
-        if match:
-            name, version = match.groups()
-        else:
-            name, version = package, None
-        packages[name].append(Version(version, path))
-
-        if not match:
-            log.error('{} has a badly formatted version'.format(package))
-    return packages
-
-
-def path_to_name(path, bundle):
-    return dict(bundle)[path]
-
-
-def name_to_path(name, bundle):
-    return dict([(v, k) for k, v in bundle])[name]
-
-
-def pip_cache_path():
-    return os.path.expanduser(os.environ['PIP_DOWNLOAD_CACHE'])
-
-
-def pip_cached_packages(pip_cache_dir=None):
-    pip_cache_dir = pip_cache_dir or pip_cache_path()
-    assert os.path.exists(pip_cache_dir)
-    composed = compose(urllib2.unquote, os.path.basename)
-
-    packages = glob.iglob('{}/*'.format(pip_cache_dir))
-    return ((package, composed(package)) for package in packages)
-
-
 @view_config(route_name='simple', renderer='simple.html')
 def simple_list(request):
-    return {'packages': pip_cache_to_packages()}
+    package_dir = request.registry.settings['local_packages']
+    return {'packages': local_packages(package_dir)}
 
 
-@view_config(route_name='package_list')
-def packages(request):
+@view_config(route_name='package_list', renderer='package_list.html')
+def package_list(request):
+    package_dir = request.registry.settings['local_packages']
     name = request.matchdict['package']
-    assert False, name
+    return {'package_versions': local_versions(package_dir, name),
+            'package_name': name}
 
 
-def download(request):
-    name = request.matchdict['package']
-    path = name_to_path(name, pip_cached_packages())
-    return FileResponse(path)
+@view_config(route_name='download_package')
+def download_package(request):
+    name, version = request.matchdict['package'], request.matchdict['version']
+    package_dir = request.registry.settings['local_packages']
+    package_path = get_package(package_dir, name, version)
+    return FileResponse(package_path)

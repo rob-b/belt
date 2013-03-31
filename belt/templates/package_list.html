@@ -1,0 +1,13 @@
+<html>
+  <head>
+    <title>Simple index</title>
+  </head>
+  <body>
+
+    {% for version in package_versions %}
+    <a href="{{ request.route_url('download_package', package=package_name, version=version) }}">{{ version }}</a>
+    <br>
+    {% endfor %}
+  </body>
+</html>
+

@@ -39,7 +39,5 @@ setup(name='belt',
       entry_points="""\
       [paste.app_factory]
       main = belt:main
-      [console_scripts]
-      initialize_belt_db = belt.scripts.initializedb:main
       """,
       )
