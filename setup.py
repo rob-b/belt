@@ -15,6 +15,13 @@ requires = [
     'pyramid_debugtoolbar',
     'zope.sqlalchemy',
     'waitress',
+    'lxml',
+]
+
+test_requires = [
+    'fudge'
+    'httpretty',
+    'pytest',
 ]
 
 setup(name='belt',
@@ -36,6 +43,7 @@ setup(name='belt',
       zip_safe=False,
       test_suite='belt',
       install_requires=requires,
+      tests_require=test_requires,
       entry_points="""\
       [paste.app_factory]
       main = belt:main
