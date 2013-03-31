@@ -5,7 +5,7 @@
   <body>
 
     {% for version in package_versions %}
-    <a href="{{ request.route_url('download_package', package=package_name, version=version) }}">{{ version }}</a>
+    <a href="{{ request.route_url('download_package', package=package_name, version=version, kind=kind, letter=letter) }}">{{ version }}</a>
     <br>
     {% endfor %}
   </body>
