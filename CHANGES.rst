@@ -1,4 +1,4 @@
-0.2 (unreleased)
+0.2 (2013-04-01)
 ----------------
 
 - Nothing changed yet.
