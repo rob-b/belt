@@ -1,7 +1,7 @@
-0.3 (unreleased)
+0.3 (2013-04-01)
 ----------------
 
-- Nothing changed yet.
+- Set license to 3 clause BSD
 
 
 0.2 (2013-04-01)
