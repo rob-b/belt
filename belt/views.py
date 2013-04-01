@@ -6,7 +6,8 @@ from pyramid.response import FileResponse
 from pyramid.httpexceptions import exception_response, HTTPNotFound
 
 from .utils import (local_packages, local_versions, get_package, pypi_url,
-                    get_package_from_pypi, store_locally)
+                    get_package_from_pypi, store_locally, pypi_versions,
+                    pypi_package_page, convert_url_to_pypi)
 
 _ = TranslationStringFactory('belt')
 
@@ -32,7 +33,15 @@ def simple_list(request):
 def package_list(request):
     package_dir = request.registry.settings['local_packages']
     name = request.matchdict['package']
-    return {'package_versions': local_versions(package_dir, name),
+    package_versions = local_versions(package_dir, name)
+    if not package_versions:
+        url = convert_url_to_pypi(request.path)
+        pypi_page = pypi_package_page(url)
+        remote_versions = pypi_versions(pypi_page, request.path_url)
+    else:
+        remote_versions = []
+    return {'local_versions': package_versions,
+            'remote_versions': remote_versions,
             'kind': 'source',
             'letter': name[0],
             'package_name': name}

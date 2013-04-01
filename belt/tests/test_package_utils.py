@@ -2,6 +2,7 @@ import os.path
 import urllib2
 import cStringIO
 import py.test
+import lxml.html
 from hashlib import md5
 from httpretty import HTTPretty, httprettified
 
@@ -139,3 +140,46 @@ class TestGetPackageFromPypi(object):
 
         with py.test.raises(urllib2.URLError):
             get_package_from_pypi(url)
+
+
+def get_html_fixture(name):
+
+    with open(os.path.join(os.path.dirname(__file__), name)) as fp:
+        return fp.read()
+
+
+class TestPypiVersions(object):
+
+    def test_finds_all_links_in_page(self):
+        from ..utils import pypi_versions
+        page = '<p><a href="">a</a><a href="">b</a>'
+        links = pypi_versions(page)
+        assert 2 == len(links)
+
+    def test_skips_homepage_links(self):
+        from ..utils import pypi_versions
+        page = '<p><a rel="homepage" href="">a</a><a href="">b</a>'
+        links = ''.join(pypi_versions(page))
+        html = lxml.html.fromstring(links)
+
+        elems = []
+        for elem, attr, link, post in html.iterlinks():
+            if elem.attrib.get('rel', '') == 'homepage':
+                elems.append(elem)
+        assert 0 == len(elems)
+
+    def test_makes_links_absolute(self):
+        from ..utils import pypi_versions
+        page = '<a href="../../packages/nose.tgz">nose</a>'
+        link = pypi_versions(page, 'http://p.org/s/nose/')[0]
+        assert link == '<a href="http://p.org/packages/nose.tgz">nose</a>'
+
+    @httprettified
+    def test_reads_pypi_version_of_package_page(self):
+        from ..utils import pypi_package_page
+        HTTPretty.register_uri(HTTPretty.GET,
+                               'https://pypi.python.org/simple/nose/',
+                               body='<a href="">G</a><a href="">B</a>',)
+
+        response = pypi_package_page('http://localhost/simple/nose/')
+        assert '<a href="">G</a><a href="">B</a>' == response
