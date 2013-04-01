@@ -25,11 +25,7 @@ class PyTest(TestCommand):
 requires = [
     'pyramid',
     'pyramid_jinja2',
-    'SQLAlchemy',
-    'transaction',
-    'pyramid_tm',
     'pyramid_debugtoolbar',
-    'zope.sqlalchemy',
     'waitress',
     'lxml',
 ]

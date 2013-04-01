@@ -1,4 +1,4 @@
-belt README
-
+Simple PyPI Proxy
+=================
 
 
