@@ -6,6 +6,7 @@ To install::
     easy_install belt
 
 or::
+
     pip install belt
 
 
