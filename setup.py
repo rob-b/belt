@@ -1,10 +1,26 @@
 import os
+import sys
 
 from setuptools import setup, find_packages
+from setuptools.command.test import test as TestCommand
 
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.txt')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
+
+
+class PyTest(TestCommand):
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        import pytest
+        errno = pytest.main(self.test_args)
+        sys.exit(errno)
+
 
 requires = [
     'pyramid',
@@ -19,8 +35,9 @@ requires = [
 ]
 
 test_requires = [
-    'fudge'
+    'fudge',
     'httpretty',
+    'pytest-cov',
     'pytest',
 ]
 
@@ -44,6 +61,7 @@ setup(name='belt',
       test_suite='belt',
       install_requires=requires,
       tests_require=test_requires,
+      cmdclass={'test': PyTest},
       entry_points="""\
       [paste.app_factory]
       main = belt:main
