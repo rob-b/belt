@@ -1,9 +1,9 @@
 import urllib2
 import logging
-from pyramid.view import view_config
+from pyramid.view import view_config, notfound_view_config
 from pyramid.i18n import TranslationStringFactory
 from pyramid.response import FileResponse
-from pyramid.httpexceptions import exception_response
+from pyramid.httpexceptions import exception_response, HTTPNotFound
 
 from .utils import (local_packages, local_versions, get_package, pypi_url,
                     get_package_from_pypi, store_locally)
@@ -15,6 +15,11 @@ PYPI_BASE_URL = 'https://pypi.python.org/packages'
 
 
 log = logging.getLogger(__name__)
+
+
+@notfound_view_config(append_slash=True)
+def notfound(request):
+    return HTTPNotFound()
 
 
 @view_config(route_name='simple', renderer='simple.html')
