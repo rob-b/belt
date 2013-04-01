@@ -1,6 +1,9 @@
 Simple PyPI Proxy
 =================
 
+Latest version is always available at `github.com/rob-b/belt
+<https://github.com/rob-b/belt>`
+
 To install::
 
     easy_install belt
