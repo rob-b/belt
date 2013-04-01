@@ -28,6 +28,9 @@ requires = [
     'pyramid_debugtoolbar',
     'waitress',
     'lxml',
+    'logsna',
+    'wheel',
+    'distribute',
 ]
 
 test_requires = [
