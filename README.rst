@@ -1,8 +1,12 @@
 Simple PyPI Proxy
 =================
 
-Latest version is always available at `github.com/rob-b/belt
-<https://github.com/rob-b/belt>`
+Belt is a simple PyPI proxy. Any packages that exist locally will be
+installed direct from disk, non-existent packages will be installed from PyPI
+and stored locally for future use.
+
+The latest version is always available at `github.com/rob-b/belt
+<https://github.com/rob-b/belt>`_
 
 To install::
 
@@ -75,7 +79,3 @@ Then run with `pserve`::
 You can now install packages via your local proxy::
 
     pip install -i http://localhost:6543/simple/ zest.releaser
-
-Any packages that exist locally will be installed direct from disk,
-non-existent packages will be installed from PyPI and stored locally for
-future use.
