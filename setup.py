@@ -38,7 +38,7 @@ test_requires = [
 ]
 
 setup(name='belt',
-      version='0.2',
+      version='0.3.dev0',
       description='belt',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
