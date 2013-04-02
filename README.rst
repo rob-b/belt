@@ -31,7 +31,6 @@ your locally cached packages::
     pyramid.debug_routematch = false
     pyramid.default_locale_name = en
     pyramid.includes =
-        pyramid_tm
 
     jinja2.directories = belt:templates
     jinja2.filters =
