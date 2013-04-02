@@ -1,7 +1,7 @@
-0.4 (unreleased)
+0.3.1 (2013-04-02)
 ----------------
 
-- Nothing changed yet.
+- Remove references to pyramid_tm
 
 
 0.3 (2013-04-01)
