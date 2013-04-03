@@ -1,7 +1,7 @@
-0.4 (unreleased)
+0.4 (2013-04-03)
 ----------------
 
-- Nothing changed yet.
+- `createwheels` command builds wheel for each local package
 
 
 0.3.1 (2013-04-02)

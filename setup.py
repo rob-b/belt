@@ -41,7 +41,7 @@ test_requires = [
 ]
 
 setup(name='belt',
-      version='0.4.dev0',
+      version='0.4',
       description='belt',
       license='BSD',
       long_description=README + '\n\n' + CHANGES,
@@ -66,5 +66,7 @@ setup(name='belt',
       entry_points="""\
       [paste.app_factory]
       main = belt:main
+      [console_scripts]
+      createwheels = belt.scripts.createwheels:_build_wheels
       """,
       )
