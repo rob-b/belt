@@ -66,5 +66,7 @@ setup(name='belt',
       entry_points="""\
       [paste.app_factory]
       main = belt:main
+      [console_scripts]
+      createwheels = belt.scripts.createwheels:_build_wheels
       """,
       )
