@@ -47,13 +47,36 @@ def package_list(request):
             'package_name': name}
 
 
+@view_config(route_name='package_version', renderer='package_list.html')
+def package_version(request):
+    name = request.matchdict['package']
+    version = request.matchdict['version']
+
+    # when specifiying a version pip requests /simple/package/version but it
+    # seems that url scheme never resolves on the real pypi which gives us a
+    # chance to inject a decision (perhaps that is the purpose of that
+    # lookup). If we have a local package with said name and version we can
+    # redirect to our local list, else use the pypi list for this package in
+    # case it exists there. Unfortunately we cannot just directly download
+    # from this point as we don't have the 'kind' value
+    package_dir = request.registry.settings['local_packages']
+    package_path = get_package(package_dir, name, version)
+    if not package_path.exists:
+        log.info(package_path.path + u' does not exist, retrieve from pypi')
+    else:
+        log.info(package_path.path + u' exists')
+    return HTTPNotFound()
+
+
 @view_config(route_name='download_package')
 def download_package(request):
     name, version, kind, letter = [request.matchdict[key] for key in
                                    ['package', 'version', 'kind', 'letter']]
     package_dir = request.registry.settings['local_packages']
+
     package_path = get_package(package_dir, name, version)
     if not package_path.exists:
+        log.info(package_path.path + u' does not exist, retrieve from pypi')
         url = pypi_url(PYPI_BASE_URL, kind, letter, name, version)
         try:
             package = get_package_from_pypi(url)
