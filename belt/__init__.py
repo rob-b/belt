@@ -1,5 +1,7 @@
 from pyramid.config import Configurator
 from pyramid_jinja2 import renderer_factory
+from sqlalchemy import engine_from_config
+from .models import DBSession, Base
 
 
 def main(global_config, **settings):
@@ -8,6 +10,10 @@ def main(global_config, **settings):
     It is usually called by the PasteDeploy framework during
     ``paster serve``.
     """
+    engine = engine_from_config(settings, 'sqlalchemy.')
+    DBSession.configure(bind=engine)
+    Base.metadata.bind = engine
+
     settings = dict(settings)
     settings.setdefault('jinja2.i18n.domain', 'belt')
 
