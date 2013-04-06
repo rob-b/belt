@@ -56,7 +56,7 @@ class Version(object):
                     self._md5 = hashed.read()
             except IOError:
                 msg = u'{} does not exist'.format(hash_name)
-                logging.exception(msg)
+                logger.exception(msg)
         return self._md5
 
 
