@@ -83,3 +83,22 @@ def store_locally(path, fo):
     with open(path) as package:
         with open(path + '.md5', 'w') as hashed:
             hashed.write(md5(package.read()).hexdigest())
+
+
+import re
+
+
+def get_search_names(name):
+    parts = re.split('[-_]', name)
+    if len(parts) == 1:
+        return parts
+
+    result = set()
+    for i in range(len(parts) - 1, 0, -1):
+        for s1 in '-_':
+            prefix = s1.join(parts[:i])
+            for s2 in '-_':
+                suffix = s2.join(parts[i:])
+                for s3 in '-_':
+                    result.add(s3.join([prefix, suffix]))
+    return list(result)

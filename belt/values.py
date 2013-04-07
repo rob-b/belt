@@ -35,7 +35,7 @@ class ReleaseValue(object):
     def md5(self):
         if not self._md5:
 
-            hash_name = os.path.join(self.package_dir, self.name) + '.md5'
+            hash_name = self.fullpath + '.md5'
             try:
                 with open(hash_name) as hashed:
                     self._md5 = hashed.read()
@@ -43,3 +43,7 @@ class ReleaseValue(object):
                 msg = u'{} does not exist'.format(hash_name)
                 logger.exception(msg)
         return self._md5
+
+    @property
+    def fullpath(self):
+        return os.path.join(self.package_dir, self.fullname)

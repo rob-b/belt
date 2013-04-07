@@ -12,24 +12,20 @@ from pyramid.paster import (
 
 from ..models import (
     DBSession,
-    Package,
-    Release,
     Base,
     seed_packages,
 )
 
-from ..views import pip_cache_to_packages
-
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri>\n'
+    print('usage: %s <config_uri> [<package_directory>]\n'
           '(example: "%s development.ini")' % (cmd, cmd))
     sys.exit(1)
 
 
 def main(argv=sys.argv):
-    if len(argv) != 2:
+    if len(argv) not in [2, 3]:
         usage(argv)
     config_uri = argv[1]
     setup_logging(config_uri)
@@ -37,6 +33,12 @@ def main(argv=sys.argv):
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
     Base.metadata.create_all(engine)
-    with transaction.manager:
-        for pkg in seed_packages(pip_cache_to_packages()):
-            DBSession.add(pkg)
+
+    try:
+        package_dir = argv[2]
+    except IndexError:
+        pass
+    else:
+        with transaction.manager:
+            for pkg in seed_packages(package_dir):
+                DBSession.add(pkg)
