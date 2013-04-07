@@ -4,6 +4,7 @@ import logging
 import urlparse
 import lxml.html
 from hashlib import md5
+from .values import Path, Version
 
 
 logger = logging.getLogger(__name__)
@@ -20,44 +21,6 @@ def get_url(url):
         logger.exception(msg)
         raise
     return fo
-
-
-class Path(object):
-
-    def __init__(self, path):
-        self.path = path
-
-    @property
-    def exists(self):
-        return os.path.exists(self.path)
-
-
-class Version(object):
-
-    _md5 = ''
-
-    def __init__(self, name, package_dir):
-        self.name = name
-        self.package_dir = package_dir
-
-    def __eq__(self, other):
-        return self.name == other
-
-    def __repr__(self):
-        return self.name
-
-    @property
-    def md5(self):
-        if not self._md5:
-
-            hash_name = os.path.join(self.package_dir, self.name) + '.md5'
-            try:
-                with open(hash_name) as hashed:
-                    self._md5 = hashed.read()
-            except IOError:
-                msg = u'{} does not exist'.format(hash_name)
-                logger.exception(msg)
-        return self._md5
 
 
 def local_packages(packages_root):
