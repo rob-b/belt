@@ -16,7 +16,7 @@ class Path(object):
         return os.path.exists(self.path)
 
 
-class Version(object):
+class ReleaseValue(object):
 
     _md5 = ''
 

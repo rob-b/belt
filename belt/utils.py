@@ -4,7 +4,7 @@ import logging
 import urlparse
 import lxml.html
 from hashlib import md5
-from .values import Path, Version
+from .values import Path, ReleaseValue
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ def convert_url_to_pypi(url):
 def local_releases(packages_root, package_name):
     package_dir = os.path.join(packages_root, package_name)
     candidates = os.listdir(package_dir) if os.path.exists(package_dir) else []
-    return [Version(version, package_dir) for version in candidates if not version.endswith('.md5')]
+    return [ReleaseValue(version, package_dir) for version in candidates if not version.endswith('.md5')]
 
 
 def get_package(packages_root, package_name, package_version):
