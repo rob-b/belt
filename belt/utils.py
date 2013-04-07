@@ -91,7 +91,7 @@ def convert_url_to_pypi(url):
     return urlparse.urljoin(base, urlparse.urlsplit(url).path)
 
 
-def local_versions(packages_root, package_name):
+def local_releases(packages_root, package_name):
     package_dir = os.path.join(packages_root, package_name)
     candidates = os.listdir(package_dir) if os.path.exists(package_dir) else []
     return [Version(version, package_dir) for version in candidates if not version.endswith('.md5')]
