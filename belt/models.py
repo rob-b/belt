@@ -1,3 +1,5 @@
+import os
+from hashlib import md5
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship
 from zope.sqlalchemy import ZopeTransactionExtension
@@ -38,11 +40,6 @@ class Release(Base):
                       server_default=func.now(), onupdate=func.now())
     files = relationship('File', backref='release')
 
-    def __init__(self, version, path=None, local=True):
-        self.local = local
-        self.version = version
-        self.path = path
-
     def __repr__(self):
         return u'release: {}-{}'.format(self.package.name, self.version)
 
@@ -58,18 +55,20 @@ class File(Base):
     filename = Column(Text, nullable=False)
     md5 = Column(Text, nullable=False)
 
-    def __init__(self, filename, md5=None):
-        self.filename = filename
-        self.md5 = md5 or u''
-
 
 def seed_packages(package_dir):
     packages = []
     for pkg in local_packages(package_dir):
         package = Package(name=pkg)
         for rel in local_releases(package_dir, pkg):
-            release = Release(rel.number)
-            release.files.append(File(rel.fullpath, rel.md5))
+            root, ext = os.path.splitext(rel.fullpath)
+            if ext in ('.whl', '.md5'):
+                continue
+            release = Release(version=rel.number)
+
+            with open(rel.fullpath) as fo:
+                hashed_content = md5(fo .read()).hexdigest()
+            release.files.append(File(filename=rel.fullpath, md5=hashed_content))
             package.releases.append(release)
         packages.append(package)
     return packages

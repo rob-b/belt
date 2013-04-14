@@ -34,11 +34,7 @@ def main(argv=sys.argv):
     DBSession.configure(bind=engine)
     Base.metadata.create_all(engine)
 
-    try:
-        package_dir = argv[2]
-    except IndexError:
-        pass
-    else:
-        with transaction.manager:
-            for pkg in seed_packages(package_dir):
-                DBSession.add(pkg)
+    package_dir = argv[2]
+    with transaction.manager:
+        for pkg in seed_packages(package_dir):
+            DBSession.add(pkg)
