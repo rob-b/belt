@@ -54,6 +54,19 @@ class File(Base):
     release_id = Column(Integer, ForeignKey('release.id'))
     filename = Column(Text, nullable=False)
     md5 = Column(Text, nullable=False)
+    kind = Column(Text, nullable=False, default='source')
+
+    @property
+    def basename(self):
+        return os.path.basename(self.filename)
+
+    @classmethod
+    def for_release(self, package, version):
+        return (DBSession
+                .query(File)
+                .join(File.release, Release.package)
+                .filter(Release.version == version, Package.name == package)
+                .one())
 
 
 def seed_packages(package_dir):
@@ -62,7 +75,7 @@ def seed_packages(package_dir):
         package = Package(name=pkg)
         for rel in local_releases(package_dir, pkg):
             root, ext = os.path.splitext(rel.fullpath)
-            if ext in ('.whl', '.md5'):
+            if ext in ('.md5'):
                 continue
             release = Release(version=rel.number)
 

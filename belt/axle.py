@@ -26,7 +26,6 @@ def mkdir_p(path):
 
 
 def split_package_name(name):
-    # name_ = ARCHIVE_SUFFIX.sub('', name)
     pkg_name = re.split(r'-\d+', name, 1)[0]
     version = name[len(pkg_name) + 1:]
     version = ARCHIVE_SUFFIX.sub('', version)
