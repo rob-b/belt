@@ -1,3 +1,4 @@
+import os
 import urllib2
 import logging
 from pyramid.view import view_config, notfound_view_config
@@ -8,6 +9,12 @@ from pyramid.httpexceptions import exception_response, HTTPNotFound
 from .utils import (local_packages, local_releases, get_package, pypi_url,
                     get_package_from_pypi, store_locally, pypi_versions,
                     pypi_package_page, convert_url_to_pypi)
+
+from sqlalchemy import or_
+from sqlalchemy.orm import exc
+from .models import DBSession, Package, File, Release
+from .utils import get_search_names
+from .axle import split_package_name
 
 _ = TranslationStringFactory('belt')
 
@@ -25,23 +32,17 @@ def notfound(request):
 
 @view_config(route_name='simple', renderer='simple.html')
 def simple_list(request):
-    package_dir = request.registry.settings['local_packages']
-    return {'packages': local_packages(package_dir)}
+    pkgs = DBSession.query(Package).all()
+    return {'packages': pkgs}
 
 
 @view_config(route_name='package_list', renderer='package_list.html')
 def package_list(request):
-    package_dir = request.registry.settings['local_packages']
     name = request.matchdict['package']
-    package_versions = local_releases(package_dir, name)
-    if not package_versions:
-        url = convert_url_to_pypi(request.path)
-        pypi_page = pypi_package_page(url)
-        remote_versions = pypi_versions(pypi_page, request.path_url)
-    else:
-        remote_versions = []
-    return {'local_versions': package_versions,
-            'remote_versions': remote_versions,
+    names = get_search_names(name)
+    or_query = or_(*[Package.name == n for n in names])
+    pkg = DBSession.query(Package).filter(or_query).one()
+    return {'package': pkg,
             'kind': 'source',
             'letter': name[0],
             'package_name': name}
@@ -70,19 +71,37 @@ def package_version(request):
 
 @view_config(route_name='download_package')
 def download_package(request):
-    name, version, kind, letter = [request.matchdict[key] for key in
-                                   ['package', 'version', 'kind', 'letter']]
-    package_dir = request.registry.settings['local_packages']
+    name, basename, kind, letter = [request.matchdict[key] for key in
+                                   ['package', 'basename', 'kind', 'letter']]
+    name, version = split_package_name(basename)
 
-    package_path = get_package(package_dir, name, version)
-    if not package_path.exists:
-        log.info(package_path.path + u' does not exist, retrieve from pypi')
-        url = pypi_url(PYPI_BASE_URL, kind, letter, name, version)
+    try:
+        rel_file = File.for_release(package=name, version=version)
+    except exc.NoResultFound:
+        package_dir = request.registry.settings['local_packages']
+        # package_dir = '/tmp'
+        dest = os.path.join(package_dir, name, basename)
+        rel_file = File(filename=dest, md5='')
+
+        try:
+            release = (DBSession.query(Release).join(Release.package)
+                       .filter(Release.version == version, Package.name == name)
+                       .one())
+        except:
+            pass
+        else:
+            release.files.append(rel_file)
+            DBSession.add(rel_file)
+
+    if not os.path.exists(rel_file.filename):
+
+        log.info(basename + u' does not exist, retrieve from pypi')
+        url = pypi_url(PYPI_BASE_URL, kind, letter, name, basename)
         try:
             package = get_package_from_pypi(url)
         except urllib2.HTTPError as err:
             raise exception_response(err.code, body=err.read())
         except urllib2.URLError:
             raise
-        store_locally(package_path.path, package)
-    return FileResponse(package_path.path)
+        store_locally(rel_file.filename, package)
+    return FileResponse(rel_file.filename)
