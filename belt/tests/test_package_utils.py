@@ -3,7 +3,6 @@ import urllib2
 import cStringIO
 import py.test
 import lxml.html
-from hashlib import md5
 from httpretty import HTTPretty, httprettified
 
 
@@ -101,18 +100,6 @@ class TestStoreLocally(object):
 
         with open(destination) as output:
             assert 'path making' == output.read()
-
-    def test_creates_md5_of_package(self, tmpdir):
-        from ..utils import store_locally
-
-        destination = os.path.join(str(tmpdir), 'baz-1.zip')
-        fo = cStringIO.StringIO()
-        fo.write('sOmE cOnTeNt')
-        fo.seek(0)
-
-        store_locally(destination, fo)
-        with open(destination + '.md5') as hashed:
-            assert md5('sOmE cOnTeNt').hexdigest() == hashed.read()
 
 
 class TestGetPackageFromPypi(object):

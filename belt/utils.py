@@ -3,7 +3,6 @@ import urllib2
 import logging
 import urlparse
 import lxml.html
-from hashlib import md5
 from .values import Path, ReleaseValue
 
 
@@ -79,10 +78,6 @@ def store_locally(path, fo):
         os.makedirs(dirname)
     with open(path, 'w') as package:
         package.write(fo.read())
-
-    with open(path) as package:
-        with open(path + '.md5', 'w') as hashed:
-            hashed.write(md5(package.read()).hexdigest())
 
 
 import re

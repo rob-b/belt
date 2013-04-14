@@ -40,8 +40,9 @@ class ReleaseValue(object):
                 with open(hash_name) as hashed:
                     self._md5 = hashed.read()
             except IOError:
-                msg = u'{} does not exist'.format(hash_name)
-                logger.exception(msg)
+                # msg = u'{} does not exist'.format(hash_name)
+                # logger.exception(msg)
+                pass
         return self._md5
 
     @property
