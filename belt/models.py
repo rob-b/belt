@@ -5,7 +5,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker, relationship
 from zope.sqlalchemy import ZopeTransactionExtension
 
 from sqlalchemy import (Column, Integer, Text, Boolean, ForeignKey, DateTime,
-                        func)
+                        func, UniqueConstraint)
 from .utils import local_packages, local_releases
 
 
@@ -40,6 +40,8 @@ class Release(Base):
                       server_default=func.now(), onupdate=func.now())
     files = relationship('File', backref='release')
 
+    __table_args__ = (UniqueConstraint('version', 'package_id'), )
+
     def __repr__(self):
         return u'release: {}-{}'.format(self.package.name, self.version)
 
@@ -52,8 +54,8 @@ class File(Base):
     modified = Column(DateTime(timezone=True), nullable=False,
                       server_default=func.now(), onupdate=func.now())
     release_id = Column(Integer, ForeignKey('release.id'))
-    filename = Column(Text, nullable=False)
-    md5 = Column(Text, nullable=False)
+    filename = Column(Text, nullable=False, default=u'')
+    md5 = Column(Text, nullable=False, default=u'')
     kind = Column(Text, nullable=False, default='source')
 
     @property
