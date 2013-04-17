@@ -18,7 +18,7 @@ def http(request):
 
 
 @pytest.fixture(scope='session')
-def connection():
+def connection(request):
     settings = get_appsettings(os.path.join(ROOT, 'test.ini'))
     engine = engine_from_config(settings, 'sqlalchemy.')
     engine.echo = False
@@ -27,6 +27,7 @@ def connection():
     models.DBSession.registry.clear()
     models.DBSession.configure(bind=connection)
     models.Base.metadata.bind = engine
+    request.addfinalizer(models.Base.metadata.drop_all)
     return connection
 
 
