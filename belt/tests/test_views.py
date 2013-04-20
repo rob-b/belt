@@ -28,7 +28,7 @@ def create_package(path, content=u''):
     return package
 
 
-class TestView(object):
+class TestDownloadPackage(object):
 
     def test_returns_404_if_package_not_on_pypi(self, http, db_session, dummy_request):
         from ..views import download_package
@@ -88,3 +88,11 @@ class TestView(object):
                              'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
         response = download_package(request)
         assert 'GOT IT' == response.body
+
+
+class TestPackageList(object):
+
+    def test_requests_package_data_from_pypi(self, dummy_request):
+        from ..views import package_list
+        dummy_request.matchdict = {'package': u'belt'}
+        package_list(dummy_request)
