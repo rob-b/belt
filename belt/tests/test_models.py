@@ -18,7 +18,7 @@ def test_seed(tmpdir):
 @pytest.fixture
 def session(request):
     from sqlalchemy import create_engine
-    engine = create_engine('sqlite:///test.db', echo=False)
+    engine = create_engine('sqlite://', echo=False)
 
     from sqlalchemy.orm import scoped_session, sessionmaker
     Session = scoped_session(sessionmaker())
