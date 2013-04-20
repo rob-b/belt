@@ -67,36 +67,36 @@ belt_pkg_data = [
 class TestGetReleaseData(object):
 
     def test_sets_release_version(self):
-        from ..axle import get_release_data
+        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').returns(belt_pkg_data)
                   .expects('package_releases').returns(['0.1']))
-        release, = get_release_data('belt', client=client)
+        release, = package_releases('belt', client=client)
         assert u'0.1' == release.version
 
     def test_sets_release_file_md5(self):
-        from ..axle import get_release_data
+        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').returns(belt_pkg_data)
                   .expects('package_releases').returns(['0.1']))
-        release, = get_release_data('belt', client=client)
+        release, = package_releases('belt', client=client)
         assert 'eea30ff3dc9b52c6658f7657c6dd10b5' == release.files[0].md5
 
     def test_returns_list_of_releases_to_add_to_package(self, db_session):
-        from ..axle import get_release_data
+        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').returns(belt_pkg_data)
                   .expects('package_releases').returns(['0.1']))
         pkg = models.Package(name=u'belt')
         db_session.add(pkg)
 
-        releases = get_release_data('belt', client=client)
+        releases = package_releases('belt', client=client)
         pkg.releases.extend(list(releases))
         pkg = db_session.query(models.Package).filter_by(name='belt').one()
         assert 1 == len(pkg.releases)
 
     def test_release_list_does_not_guarantee_uniqueness(self, db_session):
-        from ..axle import get_release_data
+        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').returns(belt_pkg_data)
                   .expects('package_releases').returns(['0.1']))
@@ -106,7 +106,7 @@ class TestGetReleaseData(object):
         pkg.releases.append(models.Release(version=u'0.1'))
         db_session.add(pkg)
 
-        releases = get_release_data('belt', client=client)
+        releases = package_releases('belt', client=client)
 
         # add the returned packages and flushing should cause an
         # IntegrityError because of two releases of the same name

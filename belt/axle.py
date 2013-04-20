@@ -86,7 +86,7 @@ def get_xmlrpc_client():
     return xmlrpclib.ServerProxy('https://pypi.python.org/pypi')
 
 
-def get_release_data(package, client=None):
+def package_releases(package, client=None):
     from belt import models
     client = client or get_xmlrpc_client()
     for version in client.package_releases(package, True):
