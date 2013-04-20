@@ -13,7 +13,6 @@ from .utils import (local_packages, local_releases, get_package, pypi_url,
 from sqlalchemy import or_
 from sqlalchemy.orm import exc
 from .models import DBSession, Package, File, Release
-from .utils import get_search_names
 from .axle import split_package_name
 
 _ = TranslationStringFactory('belt')
@@ -39,9 +38,10 @@ def simple_list(request):
 @view_config(route_name='package_list', renderer='package_list.html')
 def package_list(request):
     name = request.matchdict['package']
-    names = get_search_names(name)
-    or_query = or_(*[Package.name == n for n in names])
-    pkg = DBSession.query(Package).filter(or_query).one()
+    try:
+        pkg = Package.by_name(name)
+    except exc.NoResultFound:
+        pass
     return {'package': pkg,
             'kind': 'source',
             'letter': name[0],

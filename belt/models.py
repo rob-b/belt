@@ -5,8 +5,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker, relationship
 from zope.sqlalchemy import ZopeTransactionExtension
 
 from sqlalchemy import (Column, Integer, Text, Boolean, ForeignKey, DateTime,
-                        func, UniqueConstraint)
-from .utils import local_packages, local_releases
+                        func, UniqueConstraint, or_)
+from .utils import local_packages, local_releases, get_search_names
 
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
@@ -25,6 +25,12 @@ class Package(Base):
 
     def __repr__(self):
         return u'package: {}'.format(self.name)
+
+    @classmethod
+    def by_name(cls, name):
+        names = get_search_names(name)
+        or_query = or_(*[Package.name == n for n in names])
+        return DBSession.query(Package).filter(or_query).one()
 
 
 class Release(Base):
