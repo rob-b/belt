@@ -20,6 +20,7 @@ def main(global_config, **settings):
     config = Configurator(settings=settings)
     config.add_translation_dirs('locale/')
     config.include('pyramid_jinja2')
+    config.include('pyramid_tm')
 
     config.add_static_view('static', 'static')
     config.add_route('simple', '/simple/')
