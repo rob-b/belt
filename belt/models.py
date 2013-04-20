@@ -49,7 +49,11 @@ class Release(Base):
     __table_args__ = (UniqueConstraint('version', 'package_id'), )
 
     def __repr__(self):
-        return u'release: {}-{}'.format(self.package.name, self.version)
+        if self.package:
+            pkg_name = self.package.name
+        else:
+            pkg_name = u'UNKNOWN'
+        return u'release: {}-{}'.format(pkg_name, self.version)
 
 
 class File(Base):
