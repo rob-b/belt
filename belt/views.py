@@ -4,16 +4,15 @@ import logging
 from pyramid.view import view_config, notfound_view_config
 from pyramid.i18n import TranslationStringFactory
 from pyramid.response import FileResponse
-from pyramid.httpexceptions import exception_response, HTTPNotFound
+from pyramid.httpexceptions import (exception_response, HTTPNotFound,
+                                    HTTPMovedPermanently)
 
-from .utils import (local_packages, local_releases, get_package, pypi_url,
-                    get_package_from_pypi, store_locally, pypi_versions,
-                    pypi_package_page, convert_url_to_pypi)
+from .utils import (get_package, pypi_url, get_package_from_pypi,
+                    store_locally, pypi_versions, )
 
-from sqlalchemy import or_
 from sqlalchemy.orm import exc
 from .models import DBSession, Package, File, Release
-from .axle import split_package_name
+from .axle import split_package_name, package_releases
 
 _ = TranslationStringFactory('belt')
 
@@ -41,7 +40,16 @@ def package_list(request):
     try:
         pkg = Package.by_name(name)
     except exc.NoResultFound:
-        pass
+        pkg = Package.create_from_pypi(name=name)
+
+    if not pkg.releases:
+        pkg.releases.extend(list(package_releases(pkg.name)))
+        DBSession.add(pkg)
+
+    if name != pkg.name:
+        dest = request.route_url('package_list', package=pkg.name)
+        raise HTTPMovedPermanently(dest)
+
     return {'package': pkg,
             'kind': 'source',
             'letter': name[0],

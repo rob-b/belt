@@ -1,6 +1,8 @@
 import py.test
+from fudge import patch, Fake, verify
 from pyramid import testing
 from pyramid.httpexceptions import HTTPNotFound, HTTPServerError
+from sqlalchemy.orm import exc
 from httpretty import HTTPretty
 from belt.utils import pypi_url
 from belt import models
@@ -94,5 +96,29 @@ class TestPackageList(object):
 
     def test_requests_package_data_from_pypi(self, dummy_request):
         from ..views import package_list
-        dummy_request.matchdict = {'package': u'belt'}
+        dummy_request.matchdict = {'package': u'foo'}
+
+        pkg = Fake('Package').has_attr(name='foo', releases=[1])
+
+        with patch('belt.views.Package') as Package:
+            Package.expects('by_name').with_args('foo').raises(exc.NoResultFound)
+            Package.expects('create_from_pypi').with_args(name='foo').returns(pkg)
+            package_list(dummy_request)
+
+    @patch('belt.views.DBSession')
+    @patch('belt.views.Package')
+    @patch('belt.views.package_releases')
+    def test_requests_package_releases_if_none_exist(self, DBSession, Package,
+                                                     package_releases):
+        from ..views import package_list
+
+        package_releases.expects_call().with_args('quux').returns('A RELEASE')
+
+        pkg = (Fake('pkg').has_attr(name='quux', releases=[]))
+        Package.expects('by_name').with_args('quux').returns(pkg)
+        DBSession.expects('add').with_args(pkg)
+
+        dummy_request = testing.DummyRequest()
+        dummy_request.matchdict = {'package': u'quux'}
+
         package_list(dummy_request)

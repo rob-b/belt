@@ -1,16 +1,28 @@
 import os
+import logging
 from hashlib import md5
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session, sessionmaker, relationship
+from sqlalchemy.orm import (scoped_session, sessionmaker, relationship,
+                            joinedload)
 from zope.sqlalchemy import ZopeTransactionExtension
 
+from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy import (Column, Integer, Text, Boolean, ForeignKey, DateTime,
                         func, UniqueConstraint, or_)
 from .utils import local_packages, local_releases, get_search_names
+from .axle import get_package_name
 
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
+
+
+log = logging.getLogger(__name__)
+
+
+class CaseInsensitiveComparator(Comparator):
+    def __eq__(self, other):
+        return func.lower(self.__clause_element__()) == func.lower(other)
 
 
 class Package(Base):
@@ -26,11 +38,25 @@ class Package(Base):
     def __repr__(self):
         return u'package: {}'.format(self.name)
 
+    @hybrid_property
+    def name_insensitive(self):
+        return self.name.lower()
+
+    @name_insensitive.comparator
+    def name_insensitive(cls):
+        return CaseInsensitiveComparator(cls.name)
+
     @classmethod
     def by_name(cls, name):
         names = get_search_names(name)
-        or_query = or_(*[Package.name == n for n in names])
-        return DBSession.query(Package).filter(or_query).one()
+        or_query = or_(*[Package.name_insensitive == n for n in names])
+        joined = joinedload(Package.releases, Release.files)
+        return DBSession.query(Package).options(joined).filter(or_query).one()
+
+    @classmethod
+    def create_from_pypi(cls, name):
+        name = get_package_name(name)
+        return cls(name=name)
 
 
 class Release(Base):
