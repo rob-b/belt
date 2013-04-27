@@ -9,6 +9,8 @@ from zope.sqlalchemy import ZopeTransactionExtension
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy import (Column, Integer, Text, Boolean, ForeignKey, DateTime,
                         func, UniqueConstraint, or_)
+from sqlalchemy.engine import Engine
+from sqlalchemy import event
 from .utils import local_packages, local_releases, get_search_names
 from .axle import get_package_name
 
@@ -30,10 +32,12 @@ class Package(Base):
     __tablename__ = 'package'
     id = Column(Integer, primary_key=True)
     name = Column(Text, unique=True)
-    releases = relationship('Release', backref='package')
+    releases = relationship('Release', backref='package',
+                            cascade='all, delete-orphan', passive_deletes=True)
 
-    def __init__(self, name):
+    def __init__(self, name, package_dir=None):
         self.name = name
+        self.package_dir = package_dir
 
     def __repr__(self):
         return u'package: {}'.format(self.name)
@@ -54,16 +58,16 @@ class Package(Base):
         return DBSession.query(Package).options(joined).filter(or_query).one()
 
     @classmethod
-    def create_from_pypi(cls, name):
+    def create_from_pypi(cls, name, package_dir):
         name = get_package_name(name)
-        return cls(name=name)
+        return cls(name=name, package_dir=package_dir)
 
 
 class Release(Base):
     __tablename__ = 'release'
     id = Column(Integer, primary_key=True)
     local = Column(Boolean, default=False)
-    package_id = Column(Integer, ForeignKey('package.id'))
+    package_id = Column(Integer, ForeignKey('package.id', ondelete='CASCADE'))
     version = Column(Text)
     download_url = Column(Text, unique=True)
     created = Column(DateTime(timezone=True), nullable=False,
@@ -81,6 +85,12 @@ class Release(Base):
             pkg_name = u'UNKNOWN'
         return u'release: {}-{}'.format(pkg_name, self.version)
 
+    @classmethod
+    def for_package(cls, package, version):
+        return (DBSession.query(Release).join(Release.package)
+                .filter(Release.version == version, Package.name == package)
+                .one())
+
 
 class File(Base):
     __tablename__ = 'file'
@@ -89,7 +99,7 @@ class File(Base):
                      server_default=func.now())
     modified = Column(DateTime(timezone=True), nullable=False,
                       server_default=func.now(), onupdate=func.now())
-    release_id = Column(Integer, ForeignKey('release.id'))
+    release_id = Column(Integer, ForeignKey('release.id', ondelete='CASCADE'))
     filename = Column(Text, nullable=False, default=u'')
     md5 = Column(Text, nullable=False, default=u'')
     kind = Column(Text, nullable=False, default='source')
@@ -99,7 +109,7 @@ class File(Base):
         return os.path.basename(self.filename)
 
     @classmethod
-    def for_release(self, package, version):
+    def for_release(cls, package, version):
         return (DBSession
                 .query(File)
                 .join(File.release, Release.package)
@@ -123,3 +133,10 @@ def seed_packages(package_dir):
             package.releases.append(release)
         packages.append(package)
     return packages
+
+
+@event.listens_for(Engine, 'connect')
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute('PRAGMA foreign_keys=ON')
+    cursor.close()

@@ -1,5 +1,6 @@
 import py.test
-from fudge import patch, Fake, verify
+from fudge import patch, Fake
+from fudge.inspector import arg
 from pyramid import testing
 from pyramid.httpexceptions import HTTPNotFound, HTTPServerError
 from sqlalchemy.orm import exc
@@ -56,7 +57,8 @@ class TestDownloadPackage(object):
         with py.test.raises(HTTPServerError):
             download_package(request)
 
-    def test_loads_existing_file_from_filesystem(self, tmpdir, db_session):
+    def test_loads_existing_file_from_filesystem(self, tmpdir, db_session,
+                                                 dummy_request):
         from ..views import download_package
 
         package = create_package(tmpdir.join('foo-1.2.tar.gz'),
@@ -64,14 +66,14 @@ class TestDownloadPackage(object):
         db_session.add(package)
         db_session.flush()
 
-        request = testing.DummyRequest()
-        request.matchdict = {'package': 'foo', 'kind': 'source',
-                             'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
+        dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
+                                   'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
 
-        response = download_package(request)
+        response = download_package(dummy_request)
         assert u'No download' == response.body
 
-    def test_obtains_missing_file_from_pypi(self, tmpdir, http, db_session):
+    def test_obtains_missing_file_from_pypi(self, tmpdir, http, db_session,
+                                            dummy_request):
         from ..views import download_package
 
         pkg = tmpdir.join('foo-1.2.tar.gz')
@@ -85,11 +87,21 @@ class TestDownloadPackage(object):
         url = pypi_url(pypi_base_url, 'source', 'f', 'foo', 'foo-1.2.tar.gz')
         HTTPretty.register_uri(HTTPretty.GET, url, body='GOT IT', status=200)
 
+        dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
+                                   'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
+        response = download_package(dummy_request)
+        assert 'GOT IT' == response.body
+
+    def test_creates_file_record_for_new_package(self, http, db_session, dummy_request):
+        from ..views import download_package
+
+        url = pypi_url(pypi_base_url, 'source', 'f', 'foo', 'foo-1.2.tar.gz')
+        HTTPretty.register_uri(HTTPretty.GET, url, body='GOT IT', status=200)
+
         request = testing.DummyRequest()
         request.matchdict = {'package': 'foo', 'kind': 'source',
                              'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
         response = download_package(request)
-        assert 'GOT IT' == response.body
 
 
 class TestPackageList(object):
@@ -102,7 +114,9 @@ class TestPackageList(object):
 
         with patch('belt.views.Package') as Package:
             Package.expects('by_name').with_args('foo').raises(exc.NoResultFound)
-            Package.expects('create_from_pypi').with_args(name='foo').returns(pkg)
+            (Package.expects('create_from_pypi')
+             .with_args(name='foo', package_dir=arg.any())
+             .returns(pkg))
             package_list(dummy_request)
 
     @patch('belt.views.DBSession')

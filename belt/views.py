@@ -8,11 +8,12 @@ from pyramid.httpexceptions import (exception_response, HTTPNotFound,
                                     HTTPMovedPermanently)
 
 from .utils import (get_package, pypi_url, get_package_from_pypi,
-                    store_locally, pypi_versions, )
+                    store_locally, pypi_versions)
 
 from sqlalchemy.orm import exc
 from .models import DBSession, Package, File, Release
-from .axle import split_package_name, package_releases
+from .axle import (split_package_name, package_releases,
+                   create_release)
 
 _ = TranslationStringFactory('belt')
 
@@ -40,7 +41,8 @@ def package_list(request):
     try:
         pkg = Package.by_name(name)
     except exc.NoResultFound:
-        pkg = Package.create_from_pypi(name=name)
+        package_dir = request.registry.settings['local_packages']
+        pkg = Package.create_from_pypi(name=name, package_dir=package_dir)
 
     if not pkg.releases:
         pkg.releases.extend(list(package_releases(pkg.name)))
@@ -82,34 +84,31 @@ def download_package(request):
     name, basename, kind, letter = [request.matchdict[key] for key in
                                    ['package', 'basename', 'kind', 'letter']]
     name, version = split_package_name(basename)
+    package_dir = request.registry.settings['local_packages']
+    filename = os.path.join(package_dir, name)
 
     try:
-        rel_file = File.for_release(package=name, version=version)
+        pkg = DBSession.query(Package).filter_by(name=name).one()
     except exc.NoResultFound:
-        package_dir = request.registry.settings['local_packages']
-        # package_dir = '/tmp'
-        dest = os.path.join(package_dir, name, basename)
-        rel_file = File(filename=dest, md5='')
+        pkg = Package(name=name)
+        DBSession.add(pkg)
 
-        try:
-            release = (DBSession.query(Release).join(Release.package)
-                       .filter(Release.version == version, Package.name == name)
-                       .one())
-        except:
-            pass
-        else:
-            release.files.append(rel_file)
-            DBSession.add(rel_file)
-
-    if not os.path.exists(rel_file.filename):
-
+    release = next((rel for rel in pkg.releases if rel.version == version), None)
+    url = pypi_url(PYPI_BASE_URL, kind, letter, name, basename)
+    log.info(release)
+    if not release:
         log.info(basename + u' does not exist, retrieve from pypi')
-        url = pypi_url(PYPI_BASE_URL, kind, letter, name, basename)
         try:
-            package = get_package_from_pypi(url)
+            pkg = create_release(version, url)
         except urllib2.HTTPError as err:
             raise exception_response(err.code, body=err.read())
         except urllib2.URLError:
             raise
-        store_locally(rel_file.filename, package)
+    else:
+        rel_file = next((f for f in release.files if f.basename == basename), None)
+
+    rel_file.filename = filename
+    if not os.path.exists(rel_file.filename):
+        fo = get_package_from_pypi(url)
+        store_locally(rel_file.filename, fo)
     return FileResponse(rel_file.filename)
