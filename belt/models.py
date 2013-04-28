@@ -9,8 +9,6 @@ from zope.sqlalchemy import ZopeTransactionExtension
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy import (Column, Integer, Text, Boolean, ForeignKey, DateTime,
                         func, UniqueConstraint, or_)
-from sqlalchemy.engine import Engine
-from sqlalchemy import event
 from .utils import local_packages, local_releases, get_search_names
 from .axle import get_package_name
 
@@ -117,6 +115,31 @@ class File(Base):
                 .one())
 
 
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound
+
+
+def get_or_create(session, model, defaults=None, **kwargs):
+    query = session.query(model).filter_by(**kwargs)
+    created = False
+    try:
+        instance = query.one()
+    except NoResultFound:
+        session.begin(nested=True)
+        defaults = defaults or {}
+        kwargs.update(defaults)
+        instance = model(**kwargs)
+        session.add(instance)
+        try:
+            session.flush()
+        except IntegrityError:
+            session.rollback()
+            instance = query.one()
+        else:
+            created = True
+    return instance, created
+
+
 def seed_packages(package_dir):
     packages = []
     for pkg in local_packages(package_dir):
@@ -133,10 +156,3 @@ def seed_packages(package_dir):
             package.releases.append(release)
         packages.append(package)
     return packages
-
-
-@event.listens_for(Engine, 'connect')
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute('PRAGMA foreign_keys=ON')
-    cursor.close()

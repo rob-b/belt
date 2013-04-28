@@ -21,7 +21,6 @@ def http(request):
 def connection(request):
     settings = get_appsettings(os.path.join(ROOT, 'test.ini'))
     engine = engine_from_config(settings, 'sqlalchemy.')
-    engine.echo = False
     models.Base.metadata.create_all(engine)
     connection = engine.connect()
     models.DBSession.registry.clear()
