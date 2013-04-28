@@ -67,9 +67,10 @@ def get_package_from_pypi(url):
     return get_url(url)
 
 
-def pypi_url(pypi_base_url, kind, letter, package_name, package_version):
-    return '{}/{}/{}/{}/{}'.format(pypi_base_url.rstrip('/'), kind, letter,
-                                   package_name, package_version)
+def pypi_url(pypi_base_url, kind, package_name, basename):
+    return '{}/{}/{}/{}/{}'.format(pypi_base_url.rstrip('/'), kind,
+                                   package_name[0],
+                                   package_name, basename)
 
 
 def store_locally(path, fo):

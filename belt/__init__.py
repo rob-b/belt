@@ -26,7 +26,8 @@ def main(global_config, **settings):
     config.add_route('simple', '/simple/')
     config.add_route('package_list', '/simple/{package}/')
     config.add_route('package_version', '/simple/{package}/{version}')
-    config.add_route('download_package', '/packages/{kind}/{letter}/{package}/{basename}')
+    config.add_route('download_package',
+                     '/packages/{kind}/{letter}/{package}/{basename}')
 
     config.scan('belt', ignore='belt.tests')
     config.add_renderer('.html', renderer_factory)

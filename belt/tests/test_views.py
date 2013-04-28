@@ -37,7 +37,7 @@ class TestDownloadPackage(object):
         from ..views import download_package
 
         request = dummy_request
-        url = pypi_url(pypi_base_url, 'source', 'f', 'flake8', 'flake8-2.0.tar.gz')
+        url = pypi_url(pypi_base_url, 'source', 'flake8', 'flake8-2.0.tar.gz')
         HTTPretty.register_uri(HTTPretty.GET, url, body='Missed it!', status=404)
         request.matchdict = {'package': 'flake8', 'kind': 'source',
                              'letter': 'f', 'basename': 'flake8-2.0.tar.gz'}
@@ -49,28 +49,13 @@ class TestDownloadPackage(object):
         from ..views import download_package
 
         request = dummy_request
-        url = pypi_url(pypi_base_url, 'source', 'f', 'flake8', 'flake8-2.0.tar.gz')
+        url = pypi_url(pypi_base_url, 'source', 'flake8', 'flake8-2.0.tar.gz')
         HTTPretty.register_uri(HTTPretty.GET, url, body='Yikes!', status=500)
         request.matchdict = {'package': 'flake8', 'kind': 'source',
                              'letter': 'f', 'basename': 'flake8-2.0.tar.gz'}
 
         with py.test.raises(HTTPServerError):
             download_package(request)
-
-    def test_loads_existing_file_from_filesystem(self, tmpdir, db_session,
-                                                 dummy_request):
-        from ..views import download_package
-
-        package = create_package(tmpdir.join('foo-1.2.tar.gz'),
-                                 content=u'No download')
-        db_session.add(package)
-        db_session.flush()
-
-        dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
-                                   'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
-
-        response = download_package(dummy_request)
-        assert u'No download' == response.body
 
     def test_obtains_missing_file_from_pypi(self, tmpdir, http, db_session,
                                             dummy_request):
@@ -84,7 +69,7 @@ class TestDownloadPackage(object):
         db_session.add(package)
         db_session.flush()
 
-        url = pypi_url(pypi_base_url, 'source', 'f', 'foo', 'foo-1.2.tar.gz')
+        url = pypi_url(pypi_base_url, 'source', 'foo', 'foo-1.2.tar.gz')
         HTTPretty.register_uri(HTTPretty.GET, url, body='GOT IT', status=200)
 
         dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
@@ -92,16 +77,59 @@ class TestDownloadPackage(object):
         response = download_package(dummy_request)
         assert 'GOT IT' == response.body
 
-    def test_creates_file_record_for_new_package(self, http, db_session, dummy_request):
+
+class TestRequestNonExistentPackage(object):
+
+    def test_creates_package_record(self, http, db_session, dummy_request):
         from ..views import download_package
 
-        url = pypi_url(pypi_base_url, 'source', 'f', 'foo', 'foo-1.2.tar.gz')
+        url = pypi_url(pypi_base_url, 'source', 'foo', 'foo-1.2.tar.gz')
         HTTPretty.register_uri(HTTPretty.GET, url, body='GOT IT', status=200)
 
         request = testing.DummyRequest()
         request.matchdict = {'package': 'foo', 'kind': 'source',
                              'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
-        response = download_package(request)
+        download_package(request)
+
+        db_session.query(models.Package).filter_by(name='foo').one()
+
+    def test_creates_release_record(self, http, db_session, dummy_request):
+        from ..views import download_package
+
+        url = pypi_url(pypi_base_url, 'source', 'foo', 'foo-1.2.tar.gz')
+        HTTPretty.register_uri(HTTPretty.GET, url, body='GOT IT', status=200)
+
+        dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
+                                   'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
+        download_package(dummy_request)
+
+        models.Release.for_package('foo', '1.2')
+
+    def test_creates_file_record(self, http, db_session, dummy_request):
+        from ..views import download_package
+
+        url = pypi_url(pypi_base_url, 'source', 'foo', 'foo-1.2.tar.gz')
+        HTTPretty.register_uri(HTTPretty.GET, url, body='GOT IT', status=200)
+
+        dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
+                                   'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
+        download_package(dummy_request)
+
+        models.File.for_release('foo', '1.2')
+
+
+class TestRequestNonExistentFile(object):
+
+    def test_redirects_to_pypi(self, http, db_session, dummy_request):
+        from ..views import download_package
+
+        url = pypi_url(pypi_base_url, 'source', 'foo', 'foo-1.2.tar.gz')
+        HTTPretty.register_uri(HTTPretty.GET, url, body='GOT IT', status=200)
+
+        dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
+                                   'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
+        response = download_package(dummy_request)
+        assert url == response.location
 
 
 class TestPackageList(object):

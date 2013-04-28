@@ -108,7 +108,7 @@ class TestGetPackageFromPypi(object):
     def test_get_package_from_pypi(self):
         from ..utils import get_package_from_pypi, pypi_url
         pypi_base_url = 'https://pypi.python.org/packages'
-        url = pypi_url(pypi_base_url, 'source', 'f', 'flake8',
+        url = pypi_url(pypi_base_url, 'source', 'flake8',
                        'flake8-2.0.tar.gz')
 
         HTTPretty.register_uri(HTTPretty.GET, url, body='Got it!')
@@ -119,7 +119,7 @@ class TestGetPackageFromPypi(object):
     def test_breaks_on_404(self):
         from ..utils import get_package_from_pypi, pypi_url
         pypi_base_url = 'https://pypi.python.org/packages'
-        url = pypi_url(pypi_base_url, 'source', 'f', 'flake8',
+        url = pypi_url(pypi_base_url, 'source', 'flake8',
                        'flake8-2.0.tar.gz')
 
         HTTPretty.register_uri(HTTPretty.GET, url, body='Missed it!',
