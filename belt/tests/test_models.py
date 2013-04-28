@@ -37,6 +37,29 @@ class TestSeedPackages(object):
         rel, = pkg.releases
         assert u'1.1' == rel.version
 
+    def test_groups_releases(self, tmpdir):
+        from ..models import seed_packages
+        quux = tmpdir.mkdir('quux').join('quux-1.1-py27-none-any.whl')
+        quux.write('')
+
+        quux = tmpdir.join('quux', 'quux-1.1.zip')
+        quux.write('')
+
+        pkg, = seed_packages(str(tmpdir))
+        assert 1 == len(pkg.releases)
+
+    def test_release_can_have_many_files(self, tmpdir):
+        from ..models import seed_packages
+        quux = tmpdir.mkdir('quux').join('quux-1.1-py27-none-any.whl')
+        quux.write('')
+
+        quux = tmpdir.join('quux', 'quux-1.1.zip')
+        quux.write('')
+
+        pkg, = seed_packages(str(tmpdir))
+        release, = pkg.releases
+        assert 2 == len(release.files)
+
 
 @pytest.fixture
 def session(request):

@@ -98,8 +98,9 @@ def package_releases(package, client=None):
     for version in client.package_releases(package, True):
         logger.debug('Found {}-{}'.format(package, version))
         for pkg_data in client.release_urls(package, version):
-            rel = models.Release(version=version, download_url=pkg_data['url'])
+            rel = models.Release(version=version)
             rel_file = models.File(md5=pkg_data['md5_digest'],
+                                   download_url=pkg_data['url'],
                                    filename=pkg_data['filename'],
                                    kind=pkg_data['python_version'])
             rel.files.append(rel_file)

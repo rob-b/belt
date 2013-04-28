@@ -63,18 +63,18 @@ class Package(Base):
 
 class Release(Base):
     __tablename__ = 'release'
+    __table_args__ = (UniqueConstraint('version', 'package_id'), )
+
     id = Column(Integer, primary_key=True)
     local = Column(Boolean, default=False)
     package_id = Column(Integer, ForeignKey('package.id', ondelete='CASCADE'))
     version = Column(Text)
-    download_url = Column(Text, unique=True)
     created = Column(DateTime(timezone=True), nullable=False,
                      server_default=func.now())
     modified = Column(DateTime(timezone=True), nullable=False,
                       server_default=func.now(), onupdate=func.now())
     files = relationship('File', backref='release')
 
-    __table_args__ = (UniqueConstraint('version', 'package_id'), )
 
     def __repr__(self):
         if self.package:
@@ -92,6 +92,8 @@ class Release(Base):
 
 class File(Base):
     __tablename__ = 'file'
+    __table_args__ = (UniqueConstraint('kind', 'release_id', 'filename'), )
+
     id = Column(Integer, primary_key=True)
     created = Column(DateTime(timezone=True), nullable=False,
                      server_default=func.now())
@@ -101,6 +103,7 @@ class File(Base):
     filename = Column(Text, nullable=False, default=u'')
     md5 = Column(Text, nullable=False, default=u'')
     kind = Column(Text, nullable=False, default='source')
+    download_url = Column(Text, unique=True)
 
     @property
     def basename(self):
@@ -142,17 +145,20 @@ def get_or_create(session, model, defaults=None, **kwargs):
 
 def seed_packages(package_dir):
     packages = []
+    releases = {}
     for pkg in local_packages(package_dir):
         package = Package(name=pkg)
         for rel in local_releases(package_dir, pkg):
             root, ext = os.path.splitext(rel.fullpath)
-            if ext in ('.md5'):
+            if ext in ['.md5']:
                 continue
-            release = Release(version=rel.number)
 
+            release = releases.setdefault(rel.number,
+                                          Release(version=rel.number))
             with open(rel.fullpath) as fo:
                 hashed_content = md5(fo .read()).hexdigest()
             release.files.append(File(filename=rel.fullpath, md5=hashed_content))
-            package.releases.append(release)
+        for k, v in releases.items():
+            package.releases.append(v)
         packages.append(package)
     return packages
