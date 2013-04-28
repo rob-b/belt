@@ -13,11 +13,11 @@ def test_move_wheels_to_pypi_dir(tmpdir):
     wh = tmpdir.join('belt-0.2-py27-none-any.whl')
     wh.write('')
 
-    py = tmpdir.mkdir('local')
+    pypi = tmpdir.mkdir('local')
 
-    copy_wheels_to_pypi(wheel_dir=str(tmpdir), local_pypi=str(py))
+    copy_wheels_to_pypi(wheel_dir=str(tmpdir), local_pypi=str(pypi))
 
-    expected = os.path.join(str(py), 'belt', 'belt-0.2-py27-none-any.whl')
+    expected = os.path.join(str(pypi), 'belt', 'belt-0.2-py27-none-any.whl')
     assert os.path.exists(expected)
 
 

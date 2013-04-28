@@ -1,3 +1,4 @@
+import re
 import os
 import urllib2
 import logging
@@ -79,9 +80,6 @@ def store_locally(path, fo):
         os.makedirs(dirname)
     with open(path, 'w') as package:
         package.write(fo.read())
-
-
-import re
 
 
 def get_search_names(name):

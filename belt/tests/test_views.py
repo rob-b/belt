@@ -129,7 +129,7 @@ class TestRequestNonExistentFile(object):
         dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
                                    'letter': 'f', 'basename': 'foo-1.2.tar.gz'}
         response = download_package(dummy_request)
-        assert url == response.location
+        assert 'GOT IT' == response.body
 
 
 class TestPackageList(object):
@@ -154,7 +154,8 @@ class TestPackageList(object):
                                                      package_releases):
         from ..views import package_list
 
-        package_releases.expects_call().with_args('quux').returns('A RELEASE')
+        rel = Fake('Release').has_attr(version='106')
+        package_releases.expects_call().with_args('quux').returns([rel])
 
         pkg = (Fake('pkg').has_attr(name='quux', releases=[]))
         Package.expects('by_name').with_args('quux').returns(pkg)
