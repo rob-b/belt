@@ -145,8 +145,8 @@ def get_or_create(session, model, defaults=None, **kwargs):
 
 def seed_packages(package_dir):
     packages = []
-    releases = {}
     for pkg in local_packages(package_dir):
+        releases = {}
         package = Package(name=pkg)
         for rel in local_releases(package_dir, pkg):
             root, ext = os.path.splitext(rel.fullpath)
