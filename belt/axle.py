@@ -29,9 +29,15 @@ def mkdir_p(path):
 
 
 def split_package_name(name):
-    pkg_name = re.split(r'-\d+', name, 1)[0]
-    version = name[len(pkg_name) + 1:]
-    version = ARCHIVE_SUFFIX.sub('', version)
+
+    wheel_match = WHEEL_INFO_RE(name)
+    if wheel_match:
+        pkg_name = wheel_match.group('name')
+        version = wheel_match.group('ver')
+    else:
+        pkg_name = re.split(r'-\d+', name, 1)[0]
+        version = name[len(pkg_name) + 1:]
+        version = ARCHIVE_SUFFIX.sub('', version)
     return pkg_name, version
 
 

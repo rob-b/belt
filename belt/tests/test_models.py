@@ -14,7 +14,7 @@ class TestSeedPackages(object):
         expected = os.path.join(str(tmpdir), 'quux', 'quux-2.0.zip')
         rel, = pkg.releases
         rel_file, = rel.files
-        assert expected == rel_file.filename
+        assert expected == rel_file.fullpath
 
     def test_sets_filename_for_whl_files(self, tmpdir):
         from ..models import seed_packages
@@ -26,7 +26,7 @@ class TestSeedPackages(object):
                                 'quux-1.1-py27-none-any.whl')
         rel, = pkg.releases
         rel_file, = rel.files
-        assert expected == rel_file.filename
+        assert expected == rel_file.fullpath
 
     def test_detects_version_for_whl_files(self, tmpdir):
         from ..models import seed_packages
@@ -79,13 +79,3 @@ def session(request):
         trans.rollback()
     request.addfinalizer(fin)
     return Session
-
-
-class TestModel(object):
-
-    def test_something(self, session):
-        package = models.Package(name='foo')
-        session.add(package)
-        rel = models.Release(version=u'1.2')
-        package.releases.append(rel)
-        rel = session.query(models.Release).one()

@@ -43,12 +43,6 @@ def download_error_msg(exc, requested_package):
     return msg
 
 
-def ensure_abs_name(filename, package_dir, package, basename):
-    if not filename or not os.path.isabs(filename):
-        filename = os.path.join(package_dir, package, basename)
-    return filename
-
-
 @notfound_view_config(append_slash=True)
 def notfound(request):
     return HTTPNotFound()
@@ -116,9 +110,10 @@ def download_package(request):
     ask_pypi = False
 
     try:
-        rel_file = File.for_release(name, version)
+        rel_file = File.by_filename(basename)
     except exc.NoResultFound:
-        rel_file = File()
+        package_dir = request.registry.settings['local_packages']
+        rel_file = File(location=package_dir, filename=basename)
 
         try:
             rel = Release.for_package(name, version)
@@ -131,11 +126,7 @@ def download_package(request):
         DBSession.add(rel)
         ask_pypi = True
 
-    package_dir = request.registry.settings['local_packages']
-    rel_file.filename = ensure_abs_name(rel_file.filename, package_dir,
-                                        package, basename)
-
-    if ask_pypi or not os.path.exists(rel_file.filename):
+    if ask_pypi or not os.path.exists(rel_file.fullpath):
 
         dest = pypi_url(PYPI_BASE_URL, kind, name, basename)
         try:
@@ -143,5 +134,5 @@ def download_package(request):
         except urllib2.URLError as err:
             log.exception(download_error_msg(err, package))
             raise download_exception(err)
-        store_locally(rel_file.filename, fo)
-    return FileResponse(rel_file.filename)
+        store_locally(rel_file.fullpath, fo)
+    return FileResponse(rel_file.fullpath)

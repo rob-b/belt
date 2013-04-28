@@ -10,7 +10,7 @@ from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy import (Column, Integer, Text, Boolean, ForeignKey, DateTime,
                         func, UniqueConstraint, or_)
 from .utils import local_packages, local_releases, get_search_names
-from .axle import get_package_name
+from .axle import get_package_name, split_package_name
 
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
@@ -100,14 +100,15 @@ class File(Base):
     modified = Column(DateTime(timezone=True), nullable=False,
                       server_default=func.now(), onupdate=func.now())
     release_id = Column(Integer, ForeignKey('release.id', ondelete='CASCADE'))
+    location = Column(Text, nullable=False, default=u'')
     filename = Column(Text, nullable=False, default=u'')
     md5 = Column(Text, nullable=False, default=u'')
     kind = Column(Text, nullable=False, default='source')
     download_url = Column(Text, unique=True)
 
     @property
-    def basename(self):
-        return os.path.basename(self.filename)
+    def fullpath(self):
+        return os.path.join(self.location, self.filename)
 
     @classmethod
     def for_release(cls, package, version):
@@ -115,6 +116,16 @@ class File(Base):
                 .query(File)
                 .join(File.release, Release.package)
                 .filter(Release.version == version, Package.name == package)
+                .all())
+
+    @classmethod
+    def by_filename(cls, filename):
+        name, version = split_package_name(filename)
+        return (DBSession
+                .query(File)
+                .join(File.release, Release.package)
+                .filter(Release.version == version, Package.name == name,
+                        File.filename == filename)
                 .one())
 
 
@@ -157,7 +168,8 @@ def seed_packages(package_dir):
                                           Release(version=rel.number))
             with open(rel.fullpath) as fo:
                 hashed_content = md5(fo .read()).hexdigest()
-            release.files.append(File(filename=rel.fullpath, md5=hashed_content))
+            release.files.append(File(filename=rel.fullname,
+                                      location=rel.package_dir, md5=hashed_content))
         for k, v in releases.items():
             package.releases.append(v)
         packages.append(package)
