@@ -36,11 +36,6 @@ def test_doesnt_overwrite_existing_wheels(tmpdir):
         copy_wheels_to_pypi(wheel_dir=str(tmpdir), local_pypi=str(local_pypi))
 
 
-def test_build_wheels_from_packages(tmpdir):
-    from ..axle import build_wheels
-    build_wheels('/vagrant/pypi', '/vagrant/wheelhouse')
-
-
 @pytest.mark.parametrize(('package', 'name_and_version'), [
     ('bump-0.1.0.tar.gz', ('bump', '0.1.0')),
     ('fudge-22.1.4.zip', ('fudge', '22.1.4')),
