@@ -1,6 +1,5 @@
 import os
 import logging
-from wheel.install import WHEEL_INFO_RE
 from .axle import split_package_name
 
 
@@ -22,12 +21,7 @@ class ReleaseValue(object):
     _md5 = ''
 
     def __init__(self, name, package_dir):
-        wheel_match = WHEEL_INFO_RE(name)
-        if wheel_match:
-            self.name = wheel_match.group('name')
-            self.number = wheel_match.group('ver')
-        else:
-            self.name, self.number = split_package_name(name)
+        self.name, self.number = split_package_name(name)
         self.fullname = name
 
         self.package_dir = package_dir
