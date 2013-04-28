@@ -3,16 +3,39 @@ import pytest
 from belt import models
 
 
-def test_seed(tmpdir):
-    from ..models import seed_packages
-    yolk = tmpdir.mkdir('quux').join('quux-2.0.zip')
-    yolk.write('')
+class TestSeedPackages(object):
 
-    pkg, = seed_packages(str(tmpdir))
-    expected = os.path.join(str(tmpdir), 'quux', 'quux-2.0.zip')
-    rel, = pkg.releases
-    rel_file, = rel.files
-    assert expected == rel_file.filename
+    def test_handles_zip_files(self, tmpdir):
+        from ..models import seed_packages
+        quux = tmpdir.mkdir('quux').join('quux-2.0.zip')
+        quux.write('')
+
+        pkg, = seed_packages(str(tmpdir))
+        expected = os.path.join(str(tmpdir), 'quux', 'quux-2.0.zip')
+        rel, = pkg.releases
+        rel_file, = rel.files
+        assert expected == rel_file.filename
+
+    def test_sets_filename_for_whl_files(self, tmpdir):
+        from ..models import seed_packages
+        quux = tmpdir.mkdir('quux').join('quux-1.1-py27-none-any.whl')
+        quux.write('')
+
+        pkg, = seed_packages(str(tmpdir))
+        expected = os.path.join(str(tmpdir), 'quux',
+                                'quux-1.1-py27-none-any.whl')
+        rel, = pkg.releases
+        rel_file, = rel.files
+        assert expected == rel_file.filename
+
+    def test_detects_version_for_whl_files(self, tmpdir):
+        from ..models import seed_packages
+        quux = tmpdir.mkdir('quux').join('quux-1.1-py27-none-any.whl')
+        quux.write('')
+
+        pkg, = seed_packages(str(tmpdir))
+        rel, = pkg.releases
+        assert u'1.1' == rel.version
 
 
 @pytest.fixture
