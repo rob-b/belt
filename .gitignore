@@ -36,3 +36,4 @@ nosetests.xml
 .pydevproject
 belt.sqlite
 test.sqlite
+htmlcov
