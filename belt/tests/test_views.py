@@ -1,5 +1,5 @@
 import py.test
-from fudge import patch, Fake
+from fudge import patch as fudge_patch, Fake
 from fudge.inspector import arg
 from pyramid import testing
 from pyramid.httpexceptions import HTTPNotFound, HTTPServerError
@@ -8,6 +8,47 @@ from httpretty import HTTPretty
 from belt.utils import pypi_url
 from belt import models
 from belt.axle import split_package_name
+
+import functools
+import sys
+
+
+def wraps(func):
+    def inner(f):
+        f = functools.wraps(func)(f)
+        original = getattr(func, '__wrapped__', func)
+        f.__wrapped__ = original
+        return f
+    return inner
+
+
+class patch(fudge_patch):
+
+    def __call__(self, fn):
+
+        @wraps(fn)
+        def caller(*args, **kw):
+            fakes = self.__enter__()
+            if not isinstance(fakes, (tuple, list)):
+                fakes = [fakes]
+            args += tuple(fakes)
+            value = None
+            try:
+                value = fn(*args, **kw)
+            except:
+                etype, val, tb = sys.exc_info()
+                self.__exit__(etype, val, tb)
+                raise etype, val, tb
+            else:
+                self.__exit__(None, None, None)
+            return value
+
+        # py.test uses the length of mock.patchings to determine how many
+        # arguments to ignore when performing its dependency injection
+        if not hasattr(caller, 'patchings'):
+            caller.patchings = []
+        caller.patchings.extend([1 for path in self.obj_paths])
+        return caller
 
 
 pypi_base_url = 'https://pypi.python.org/packages'
@@ -151,17 +192,16 @@ class TestPackageList(object):
     @patch('belt.views.Package')
     @patch('belt.views.package_releases')
     def test_requests_package_releases_if_none_exist(self, DBSession, Package,
-                                                     package_releases):
+                                                     package_releases,
+                                                     dummy_request):
         from ..views import package_list
 
         rel = Fake('Release').has_attr(version='106')
-        package_releases.expects_call().with_args('quux').returns([rel])
+        package_releases.expects_call().with_args('quux', location=arg.any()).returns([rel])
 
         pkg = (Fake('pkg').has_attr(name='quux', releases=[]))
         Package.expects('by_name').with_args('quux').returns(pkg)
         DBSession.expects('add').with_args(pkg)
 
-        dummy_request = testing.DummyRequest()
         dummy_request.matchdict = {'package': u'quux'}
-
         package_list(dummy_request)

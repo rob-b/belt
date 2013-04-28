@@ -57,15 +57,15 @@ def simple_list(request):
 @view_config(route_name='package_list', renderer='package_list.html')
 def package_list(request):
     name = request.matchdict['package']
+    package_dir = request.registry.settings['local_packages']
     try:
         pkg = Package.by_name(name)
     except exc.NoResultFound:
-        package_dir = request.registry.settings['local_packages']
         pkg = Package.create_from_pypi(name=name, package_dir=package_dir)
 
     if not pkg.releases:
         releases = {}
-        for rel in package_releases(pkg.name):
+        for rel in package_releases(pkg.name, location=package_dir):
             release = releases.setdefault(rel.version, rel)
             pkg.releases.append(release)
         DBSession.add(pkg)
