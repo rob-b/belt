@@ -1,7 +1,7 @@
 0.5 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Moved from using filesystem lookup to storing package records in db
 
 
 0.4 (2013-04-03)
