@@ -3,7 +3,6 @@ import urllib2
 import cStringIO
 import py.test
 import lxml.html
-from hashlib import md5
 from httpretty import HTTPretty, httprettified
 
 
@@ -25,44 +24,44 @@ def test_returns_empty_list_if_dir_is_empty(tmpdir):
 
 
 def test_get_dir_for_package(tmpdir):
-    from ..utils import local_versions
+    from ..utils import local_releases
     yolk = tmpdir.mkdir('yolk').join('yolk.1.0.1.tar.gz')
     yolk.write('1')
     package_dir = str(tmpdir)
-    assert ['yolk.1.0.1.tar.gz'] == local_versions(package_dir, 'yolk')
+    assert ['yolk.1.0.1.tar.gz'] == local_releases(package_dir, 'yolk')
 
 
-def test_local_versions_excludes_hash_files(tmpdir):
-    from ..utils import local_versions
+def test_local_releases_excludes_hash_files(tmpdir):
+    from ..utils import local_releases
     yolk = tmpdir.mkdir('yolk').join('yolk.1.0.1.tar.gz.md5')
     yolk.write('')
     package_dir = str(tmpdir)
-    assert [] == local_versions(package_dir, 'yolk')
+    assert [] == local_releases(package_dir, 'yolk')
 
 
-def test_local_versions_has_md5_attr(tmpdir):
-    from ..utils import local_versions
+def test_local_releases_has_md5_attr(tmpdir):
+    from ..utils import local_releases
     p = tmpdir.join('somename.exe')
     p.write('')
 
     p = tmpdir.join('somename.exe.md5')
     p.write('HASHED CONTENT')
     package_dir = str(tmpdir)
-    local, = local_versions(package_dir, '')
+    local, = local_releases(package_dir, '')
     assert 'HASHED CONTENT' == local.md5
 
 
-def test_returns_empty_list_if_no_local_versions(tmpdir):
-    from ..utils import local_versions
+def test_returns_empty_list_if_no_local_releases(tmpdir):
+    from ..utils import local_releases
     package_dir = str(tmpdir)
-    assert [] == local_versions(package_dir, 'yolk')
+    assert [] == local_releases(package_dir, 'yolk')
 
 
 def test_returns_empty_list_if_no_local_package_dir(tmpdir):
-    from ..utils import local_versions
+    from ..utils import local_releases
     package_dir = str(tmpdir)
     tmpdir.mkdir('yolk')
-    assert [] == local_versions(package_dir, 'yolk')
+    assert [] == local_releases(package_dir, 'yolk')
 
 
 def test_get_full_path_to_version(tmpdir):
@@ -102,18 +101,6 @@ class TestStoreLocally(object):
         with open(destination) as output:
             assert 'path making' == output.read()
 
-    def test_creates_md5_of_package(self, tmpdir):
-        from ..utils import store_locally
-
-        destination = os.path.join(str(tmpdir), 'baz-1.zip')
-        fo = cStringIO.StringIO()
-        fo.write('sOmE cOnTeNt')
-        fo.seek(0)
-
-        store_locally(destination, fo)
-        with open(destination + '.md5') as hashed:
-            assert md5('sOmE cOnTeNt').hexdigest() == hashed.read()
-
 
 class TestGetPackageFromPypi(object):
 
@@ -121,7 +108,7 @@ class TestGetPackageFromPypi(object):
     def test_get_package_from_pypi(self):
         from ..utils import get_package_from_pypi, pypi_url
         pypi_base_url = 'https://pypi.python.org/packages'
-        url = pypi_url(pypi_base_url, 'source', 'f', 'flake8',
+        url = pypi_url(pypi_base_url, 'source', 'flake8',
                        'flake8-2.0.tar.gz')
 
         HTTPretty.register_uri(HTTPretty.GET, url, body='Got it!')
@@ -132,7 +119,7 @@ class TestGetPackageFromPypi(object):
     def test_breaks_on_404(self):
         from ..utils import get_package_from_pypi, pypi_url
         pypi_base_url = 'https://pypi.python.org/packages'
-        url = pypi_url(pypi_base_url, 'source', 'f', 'flake8',
+        url = pypi_url(pypi_base_url, 'source', 'flake8',
                        'flake8-2.0.tar.gz')
 
         HTTPretty.register_uri(HTTPretty.GET, url, body='Missed it!',

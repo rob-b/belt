@@ -1,9 +1,10 @@
+import re
 import os
 import urllib2
 import logging
 import urlparse
 import lxml.html
-from hashlib import md5
+from .values import Path, ReleaseValue
 
 
 logger = logging.getLogger(__name__)
@@ -20,44 +21,6 @@ def get_url(url):
         logger.exception(msg)
         raise
     return fo
-
-
-class Path(object):
-
-    def __init__(self, path):
-        self.path = path
-
-    @property
-    def exists(self):
-        return os.path.exists(self.path)
-
-
-class Version(object):
-
-    _md5 = ''
-
-    def __init__(self, name, package_dir):
-        self.name = name
-        self.package_dir = package_dir
-
-    def __eq__(self, other):
-        return self.name == other
-
-    def __repr__(self):
-        return self.name
-
-    @property
-    def md5(self):
-        if not self._md5:
-
-            hash_name = os.path.join(self.package_dir, self.name) + '.md5'
-            try:
-                with open(hash_name) as hashed:
-                    self._md5 = hashed.read()
-            except IOError:
-                msg = u'{} does not exist'.format(hash_name)
-                logger.exception(msg)
-        return self._md5
 
 
 def local_packages(packages_root):
@@ -91,10 +54,10 @@ def convert_url_to_pypi(url):
     return urlparse.urljoin(base, urlparse.urlsplit(url).path)
 
 
-def local_versions(packages_root, package_name):
+def local_releases(packages_root, package_name):
     package_dir = os.path.join(packages_root, package_name)
     candidates = os.listdir(package_dir) if os.path.exists(package_dir) else []
-    return [Version(version, package_dir) for version in candidates if not version.endswith('.md5')]
+    return [ReleaseValue(version, package_dir) for version in candidates if not version.endswith('.md5')]
 
 
 def get_package(packages_root, package_name, package_version):
@@ -105,9 +68,10 @@ def get_package_from_pypi(url):
     return get_url(url)
 
 
-def pypi_url(pypi_base_url, kind, letter, package_name, package_version):
-    return '{}/{}/{}/{}/{}'.format(pypi_base_url.rstrip('/'), kind, letter,
-                                   package_name, package_version)
+def pypi_url(pypi_base_url, kind, package_name, basename):
+    return '{}/{}/{}/{}/{}'.format(pypi_base_url.rstrip('/'), kind,
+                                   package_name[0],
+                                   package_name, basename)
 
 
 def store_locally(path, fo):
@@ -117,6 +81,18 @@ def store_locally(path, fo):
     with open(path, 'w') as package:
         package.write(fo.read())
 
-    with open(path) as package:
-        with open(path + '.md5', 'w') as hashed:
-            hashed.write(md5(package.read()).hexdigest())
+
+def get_search_names(name):
+    parts = re.split('[-_]', name)
+    if len(parts) == 1:
+        return parts
+
+    result = set()
+    for i in range(len(parts) - 1, 0, -1):
+        for s1 in '-_':
+            prefix = s1.join(parts[:i])
+            for s2 in '-_':
+                suffix = s2.join(parts[i:])
+                for s3 in '-_':
+                    result.add(s3.join([prefix, suffix]))
+    return list(result)

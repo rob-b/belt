@@ -3,7 +3,10 @@ import os
 import errno
 import shutil
 import logging
+import urllib2
+import xmlrpclib
 import subprocess
+import collections
 from wheel.install import WHEEL_INFO_RE
 
 
@@ -26,7 +29,6 @@ def mkdir_p(path):
 
 
 def split_package_name(name):
-    # name_ = ARCHIVE_SUFFIX.sub('', name)
     pkg_name = re.split(r'-\d+', name, 1)[0]
     version = name[len(pkg_name) + 1:]
     version = ARCHIVE_SUFFIX.sub('', version)
@@ -77,3 +79,45 @@ def build_wheels(local_pypi, wheel_dir):
                 continue
             args = 'pip wheel --wheel-dir {} {}'.format(wheel_dir, name)
             subprocess.call(args, shell=True)
+
+
+def get_xmlrpc_client():
+    return xmlrpclib.ServerProxy('https://pypi.python.org/pypi')
+
+
+def get_package_name(name, client=None):
+    client = client or get_xmlrpc_client()
+    r = urllib2.Request('http://pypi.python.org/simple/{0}'.format(name))
+    return urllib2.urlopen(r).geturl().split('/')[-2]
+
+
+def package_releases(package, client=None):
+    from belt import models
+    client = client or get_xmlrpc_client()
+    logger.debug('Obtaining releases for ' + package)
+    for version in client.package_releases(package, True):
+        logger.debug('Found {}-{}'.format(package, version))
+        for pkg_data in client.release_urls(package, version):
+            rel = models.Release(version=version)
+            rel_file = models.File(md5=pkg_data['md5_digest'],
+                                   download_url=pkg_data['url'],
+                                   filename=pkg_data['filename'],
+                                   kind=pkg_data['python_version'])
+            rel.files.append(rel_file)
+            yield rel
+
+
+def release_union(releases):
+    keep = collections.defaultdict(list)
+    for rel in releases:
+        keep[rel.version].append(rel)
+
+    for v in keep.values():
+        yield sorted(v, key=lambda i: i.id, reverse=True)[0]
+
+
+def create_release(version, url):
+    from belt import models
+    from belt.utils import get_package_from_pypi
+    pkg = get_package_from_pypi(url)
+    rel = models.Release(version=version, download_url=url)

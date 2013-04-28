@@ -1,13 +1,18 @@
+import os
 import urllib2
 import logging
 from pyramid.view import view_config, notfound_view_config
 from pyramid.i18n import TranslationStringFactory
 from pyramid.response import FileResponse
-from pyramid.httpexceptions import exception_response, HTTPNotFound
+from pyramid.httpexceptions import (HTTPNotFound,
+                                    HTTPMovedPermanently, status_map)
 
-from .utils import (local_packages, local_versions, get_package, pypi_url,
-                    get_package_from_pypi, store_locally, pypi_versions,
-                    pypi_package_page, convert_url_to_pypi)
+from .utils import (get_package, pypi_url, get_package_from_pypi,
+                    store_locally)
+
+from sqlalchemy.orm import exc
+from .models import DBSession, Package, File, Release, get_or_create
+from .axle import (split_package_name, package_releases)
 
 _ = TranslationStringFactory('belt')
 
@@ -18,6 +23,32 @@ PYPI_BASE_URL = 'https://pypi.python.org/packages'
 log = logging.getLogger(__name__)
 
 
+def download_exception(exc):
+    if hasattr(exc, 'reason'):
+        code = 503
+    if hasattr(exc, 'code'):
+        code = exc.code
+    return status_map[code]
+
+
+def download_error_msg(exc, requested_package):
+    if hasattr(exc, 'reason'):
+        msg = (u'Error connecting to pypi and retrieving {} because {}'
+               .format(requested_package, exc.reason))
+    elif hasattr(exc, 'code'):
+        msg = (u'Pypi could not return {}. Error code: {}'
+               .format(requested_package, exc.code))
+    else:
+        msg = u'Failed to download ' + requested_package
+    return msg
+
+
+def ensure_abs_name(filename, package_dir, package, basename):
+    if not filename or not os.path.isabs(filename):
+        filename = os.path.join(package_dir, package, basename)
+    return filename
+
+
 @notfound_view_config(append_slash=True)
 def notfound(request):
     return HTTPNotFound()
@@ -25,41 +56,92 @@ def notfound(request):
 
 @view_config(route_name='simple', renderer='simple.html')
 def simple_list(request):
-    package_dir = request.registry.settings['local_packages']
-    return {'packages': local_packages(package_dir)}
+    pkgs = DBSession.query(Package).all()
+    return {'packages': pkgs}
 
 
 @view_config(route_name='package_list', renderer='package_list.html')
 def package_list(request):
-    package_dir = request.registry.settings['local_packages']
     name = request.matchdict['package']
-    package_versions = local_versions(package_dir, name)
-    if not package_versions:
-        url = convert_url_to_pypi(request.path)
-        pypi_page = pypi_package_page(url)
-        remote_versions = pypi_versions(pypi_page, request.path_url)
-    else:
-        remote_versions = []
-    return {'local_versions': package_versions,
-            'remote_versions': remote_versions,
+    try:
+        pkg = Package.by_name(name)
+    except exc.NoResultFound:
+        package_dir = request.registry.settings['local_packages']
+        pkg = Package.create_from_pypi(name=name, package_dir=package_dir)
+
+    if not pkg.releases:
+        releases = {}
+        for rel in package_releases(pkg.name):
+            release = releases.setdefault(rel.version, rel)
+            pkg.releases.append(release)
+        DBSession.add(pkg)
+
+    if name != pkg.name:
+        dest = request.route_url('package_list', package=pkg.name)
+        log.info('Redirecting from /{} to /{}'.format(name, pkg.name))
+        raise HTTPMovedPermanently(dest)
+
+    return {'package': pkg,
             'kind': 'source',
             'letter': name[0],
             'package_name': name}
 
 
-@view_config(route_name='download_package')
-def download_package(request):
-    name, version, kind, letter = [request.matchdict[key] for key in
-                                   ['package', 'version', 'kind', 'letter']]
+@view_config(route_name='package_version', renderer='package_list.html')
+def package_version(request):
+    name = request.matchdict['package']
+    version = request.matchdict['version']
+
+    # when specifiying a version pip requests /simple/package/version but it
+    # seems that url scheme never resolves on the real pypi which gives us a
+    # chance to inject a decision (perhaps that is the purpose of that
+    # lookup). If we have a local package with said name and version we can
+    # redirect to our local list, else use the pypi list for this package in
+    # case it exists there. Unfortunately we cannot just directly download
+    # from this point as we don't have the 'kind' value
     package_dir = request.registry.settings['local_packages']
     package_path = get_package(package_dir, name, version)
     if not package_path.exists:
-        url = pypi_url(PYPI_BASE_URL, kind, letter, name, version)
+        log.info(package_path.path + u' does not exist, retrieve from pypi')
+    else:
+        log.info(package_path.path + u' exists')
+    return HTTPNotFound()
+
+
+@view_config(route_name='download_package')
+def download_package(request):
+    package, basename, kind, letter = [request.matchdict[key] for key in
+                                       ['package', 'basename', 'kind', 'letter']]
+    name, version = split_package_name(basename)
+    ask_pypi = False
+
+    try:
+        rel_file = File.for_release(name, version)
+    except exc.NoResultFound:
+        rel_file = File()
+
         try:
-            package = get_package_from_pypi(url)
-        except urllib2.HTTPError as err:
-            raise exception_response(err.code, body=err.read())
-        except urllib2.URLError:
-            raise
-        store_locally(package_path.path, package)
-    return FileResponse(package_path.path)
+            rel = Release.for_package(name, version)
+        except exc.NoResultFound:
+            rel = Release(version=version)
+        rel.files.append(rel_file)
+        if not rel.package:
+            pkg, _ = get_or_create(DBSession, Package, name=name)
+            rel.package = pkg
+        DBSession.add(rel)
+        ask_pypi = True
+
+    package_dir = request.registry.settings['local_packages']
+    rel_file.filename = ensure_abs_name(rel_file.filename, package_dir,
+                                        package, basename)
+
+    if ask_pypi or not os.path.exists(rel_file.filename):
+
+        dest = pypi_url(PYPI_BASE_URL, kind, name, basename)
+        try:
+            fo = get_package_from_pypi(dest)
+        except urllib2.URLError as err:
+            log.exception(download_error_msg(err, package))
+            raise download_exception(err)
+        store_locally(rel_file.filename, fo)
+    return FileResponse(rel_file.filename)

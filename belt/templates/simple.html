@@ -4,8 +4,8 @@
   </head>
   <body>
 
-    {% for package_name in packages %}
-    <a href="{{ request.route_url('package_list', package=package_name) }}">{{ package_name }}</a>
+    {% for package in packages %}
+    <a href="{{ request.route_url('package_list', package=package.name) }}">{{ package.name }}</a>
     <br>
     {% endfor %}
   </body>
