@@ -8,7 +8,7 @@ from pyramid.httpexceptions import (HTTPNotFound,
                                     HTTPMovedPermanently, status_map)
 
 from .utils import (get_package, pypi_url, get_package_from_pypi,
-                    store_locally)
+                    store_locally, convert_url_to_pypi)
 
 from sqlalchemy.orm import exc
 from .models import DBSession, Package, File, Release, get_or_create
@@ -31,10 +31,10 @@ def download_exception(exc):
     return status_map[code]
 
 
-def download_error_msg(exc, requested_package):
+def download_error_msg(exc, requested_package, requested_url):
     if hasattr(exc, 'reason'):
-        msg = (u'Error connecting to pypi and retrieving {} because {}'
-               .format(requested_package, exc.reason))
+        msg = (u'Error connecting to pypi and retrieving {} ({}) because "{}"'
+               .format(requested_package, requested_url, exc.reason))
     elif hasattr(exc, 'code'):
         msg = (u'Pypi could not return {}. Error code: {}'
                .format(requested_package, exc.code))
@@ -65,7 +65,8 @@ def package_list(request):
 
     if not pkg.releases:
         releases = {}
-        for rel in package_releases(pkg.name, location=package_dir):
+        for rel in package_releases(pkg.name,
+                                    location=os.path.join(package_dir, pkg.name)):
             release = releases.setdefault(rel.version, rel)
             pkg.releases.append(release)
         DBSession.add(pkg)
@@ -73,7 +74,7 @@ def package_list(request):
     if name != pkg.name:
         dest = request.route_url('package_list', package=pkg.name)
         log.info('Redirecting from /{} to /{}'.format(name, pkg.name))
-        raise HTTPMovedPermanently(dest)
+        return HTTPMovedPermanently(dest)
 
     return {'package': pkg,
             'kind': 'source',
@@ -113,7 +114,9 @@ def download_package(request):
         rel_file = File.by_filename(basename)
     except exc.NoResultFound:
         package_dir = request.registry.settings['local_packages']
-        rel_file = File(location=package_dir, filename=basename)
+        package_dir = os.path.join(package_dir, package)
+        rel_file = File(location=package_dir, filename=basename,
+                        download_url=convert_url_to_pypi(request.path))
 
         try:
             rel = Release.for_package(name, version)
@@ -128,11 +131,11 @@ def download_package(request):
 
     if ask_pypi or not os.path.exists(rel_file.fullpath):
 
-        dest = pypi_url(PYPI_BASE_URL, kind, name, basename)
         try:
-            fo = get_package_from_pypi(dest)
+            fo = get_package_from_pypi(rel_file.download_url)
         except urllib2.URLError as err:
-            log.exception(download_error_msg(err, package))
+            log.exception(download_error_msg(err, package,
+                                             rel_file.download_url))
             raise download_exception(err)
         store_locally(rel_file.fullpath, fo)
     return FileResponse(rel_file.fullpath)

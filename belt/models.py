@@ -124,7 +124,8 @@ class File(Base):
         return (DBSession
                 .query(File)
                 .join(File.release, Release.package)
-                .filter(Release.version == version, Package.name == name,
+                .filter(Release.version == version,
+                        Package.name_insensitive == name,
                         File.filename == filename)
                 .one())
 
