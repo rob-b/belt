@@ -31,10 +31,10 @@ requires = [
     'zope.sqlalchemy',
     'pyramid_debugtoolbar',
     'waitress',
-    'lxml',
     'logsna',
     'wheel',
     'distribute',
+    'psycopg2',
 ]
 
 test_requires = [

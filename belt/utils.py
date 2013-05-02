@@ -3,7 +3,6 @@ import os
 import urllib2
 import logging
 import urlparse
-import lxml.html
 from .values import Path, ReleaseValue
 
 
@@ -30,6 +29,7 @@ def local_packages(packages_root):
 
 
 def pypi_versions(package_page, url=None):
+    import lxml.html
     html = lxml.html.fromstring(package_page)
     if url:
         html.make_links_absolute(url)
