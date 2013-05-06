@@ -45,7 +45,7 @@ test_requires = [
 ]
 
 setup(name='belt',
-      version='0.5.dev0',
+      version='0.5',
       description='belt',
       license='BSD',
       long_description=README + '\n\n' + CHANGES,
