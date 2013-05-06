@@ -1,2 +1,3 @@
 include *.txt *.ini *.cfg *.rst
+exclude production.ini
 recursive-include belt *.ico *.png *.css *.gif *.jpg *.pt *.txt *.mak *.mako *.js *.html *.xml *pot

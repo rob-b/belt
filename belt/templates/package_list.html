@@ -1,17 +1,15 @@
 <html>
   <head>
-    <title>Simple index</title>
+    <title>Links for {{ package.name }}</title>
   </head>
   <body>
 
-    {% for version in local_versions %}
-    <a href="{{ request.route_url('download_package', package=package_name, version=version.name, kind=kind, letter=letter) }}?md5={{ version.md5 }}">{{ version }}</a>
-    <br>
-    {% endfor %}
-
-    {% for version in remote_versions %}
-      {{ version|safe }}
-    <br>
+    <h1>Links for {{ package.name }}</h1>
+    {% for release in package.releases %}
+      {% for file in release.files %}
+      <a href="{{ request.route_url('download_package', package=package.name, basename=file.filename, kind=file.kind, letter=letter) }}?md5={{ file.md5 }}">{{ file.filename }}</a>
+        <br>
+      {% endfor %}
     {% endfor %}
   </body>
 </html>

@@ -35,3 +35,6 @@ nosetests.xml
 .project
 .pydevproject
 belt.sqlite
+test.sqlite
+htmlcov
+production.ini

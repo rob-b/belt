@@ -25,12 +25,16 @@ class PyTest(TestCommand):
 requires = [
     'pyramid',
     'pyramid_jinja2',
+    'SQLAlchemy',
+    'transaction',
+    'pyramid_tm',
+    'zope.sqlalchemy',
     'pyramid_debugtoolbar',
     'waitress',
-    'lxml',
     'logsna',
     'wheel',
     'distribute',
+    'psycopg2',
 ]
 
 test_requires = [
@@ -41,7 +45,7 @@ test_requires = [
 ]
 
 setup(name='belt',
-      version='0.4',
+      version='0.5',
       description='belt',
       license='BSD',
       long_description=README + '\n\n' + CHANGES,
@@ -68,5 +72,6 @@ setup(name='belt',
       main = belt:main
       [console_scripts]
       createwheels = belt.scripts.createwheels:_build_wheels
+      initialize_belt_db = belt.scripts.initializedb:main
       """,
       )
