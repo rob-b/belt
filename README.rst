@@ -2,7 +2,7 @@ Simple PyPI Proxy
 =================
 
 Belt is a simple PyPI proxy. Any packages that exist locally will be
-installed direct from disk, non-existent packages will be installed from PyPI
+installed direct from disk; non-existent packages will be installed from PyPI
 and stored locally for future use.
 
 The latest version is always available at `github.com/rob-b/belt
