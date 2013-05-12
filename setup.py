@@ -39,7 +39,7 @@ requires = [
 
 test_requires = [
     'fudge',
-    'httpretty',
+    'pytest-blockage',
     'pytest-cov',
     'pytest',
 ]

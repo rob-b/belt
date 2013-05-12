@@ -7,7 +7,7 @@ from pyramid.response import FileResponse
 from pyramid.httpexceptions import (HTTPNotFound,
                                     HTTPMovedPermanently, status_map)
 
-from .utils import (get_package, pypi_url, get_package_from_pypi,
+from .utils import (get_package, get_package_from_pypi,
                     store_locally, convert_url_to_pypi)
 
 from sqlalchemy.orm import exc
@@ -132,7 +132,8 @@ def download_package(request):
     if ask_pypi or not os.path.exists(rel_file.fullpath):
 
         try:
-            fo = get_package_from_pypi(rel_file.download_url)
+            url = rel_file.download_url
+            fo = get_package_from_pypi(url)
         except urllib2.URLError as err:
             log.exception(download_error_msg(err, package,
                                              rel_file.download_url))

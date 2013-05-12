@@ -2,8 +2,7 @@ import os.path
 import urllib2
 import cStringIO
 import py.test
-import lxml.html
-from httpretty import HTTPretty, httprettified
+import fudge
 
 
 def test_get_local_packages(tmpdir):
@@ -104,69 +103,23 @@ class TestStoreLocally(object):
 
 class TestGetPackageFromPypi(object):
 
-    @httprettified
     def test_get_package_from_pypi(self):
         from ..utils import get_package_from_pypi, pypi_url
         pypi_base_url = 'https://pypi.python.org/packages'
-        url = pypi_url(pypi_base_url, 'source', 'flake8',
-                       'flake8-2.0.tar.gz')
+        url = pypi_url(pypi_base_url, 'source', 'flake8', 'flake8-2.0.tar.gz')
 
-        HTTPretty.register_uri(HTTPretty.GET, url, body='Got it!')
-        response = get_package_from_pypi(url)
+        with fudge.patch('belt.utils.get_url') as get_url:
+            get_url.expects_call().returns(cStringIO.StringIO('Got it!'))
+            response = get_package_from_pypi(url)
         assert 'Got it!' == response.read()
 
-    @httprettified
-    def test_breaks_on_404(self):
+    @fudge.patch('belt.utils.get_url')
+    def test_breaks_on_404(self, get_url):
         from ..utils import get_package_from_pypi, pypi_url
-        pypi_base_url = 'https://pypi.python.org/packages'
-        url = pypi_url(pypi_base_url, 'source', 'flake8',
-                       'flake8-2.0.tar.gz')
 
-        HTTPretty.register_uri(HTTPretty.GET, url, body='Missed it!',
-                               status=404)
+        get_url.expects_call().raises(urllib2.URLError('intentional 404'))
+        pypi_base_url = 'https://pypi.python.org/packages'
+        url = pypi_url(pypi_base_url, 'source', 'flake8', 'flake8-2.0.tar.gz')
 
         with py.test.raises(urllib2.URLError):
             get_package_from_pypi(url)
-
-
-def get_html_fixture(name):
-
-    with open(os.path.join(os.path.dirname(__file__), name)) as fp:
-        return fp.read()
-
-
-class TestPypiVersions(object):
-
-    def test_finds_all_links_in_page(self):
-        from ..utils import pypi_versions
-        page = '<p><a href="">a</a><a href="">b</a>'
-        links = pypi_versions(page)
-        assert 2 == len(links)
-
-    def test_skips_homepage_links(self):
-        from ..utils import pypi_versions
-        page = '<p><a rel="homepage" href="">a</a><a href="">b</a>'
-        links = ''.join(pypi_versions(page))
-        html = lxml.html.fromstring(links)
-
-        elems = []
-        for elem, attr, link, post in html.iterlinks():
-            if elem.attrib.get('rel', '') == 'homepage':
-                elems.append(elem)
-        assert 0 == len(elems)
-
-    def test_makes_links_absolute(self):
-        from ..utils import pypi_versions
-        page = '<a href="../../packages/nose.tgz">nose</a>'
-        link = pypi_versions(page, 'http://p.org/s/nose/')[0]
-        assert link == '<a href="http://p.org/packages/nose.tgz">nose</a>'
-
-    @httprettified
-    def test_reads_pypi_version_of_package_page(self):
-        from ..utils import pypi_package_page
-        HTTPretty.register_uri(HTTPretty.GET,
-                               'https://pypi.python.org/simple/nose/',
-                               body='<a href="">G</a><a href="">B</a>',)
-
-        response = pypi_package_page('http://localhost/simple/nose/')
-        assert '<a href="">G</a><a href="">B</a>' == response
