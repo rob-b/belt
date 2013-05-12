@@ -7,7 +7,7 @@ from pyramid.httpexceptions import HTTPNotFound, HTTPServerError
 from sqlalchemy.orm import exc
 from belt.utils import pypi_url
 from belt import models
-from belt.axle import split_package_name
+from belt.tests import create_package
 
 import functools
 import sys
@@ -52,24 +52,6 @@ class patch(fudge_patch):
 
 
 pypi_base_url = 'https://pypi.python.org/packages'
-
-
-def create_package(path, content=u''):
-    import os
-
-    if content:
-        filename = str(path)
-        path.write(content)
-    else:
-        filename = u''
-    basename = os.path.basename(str(path))
-    name, version = split_package_name(basename)
-
-    package = models.Package(name=name)
-    rel = models.Release(version=version)
-    package.releases.add(rel)
-    rel.files.add(models.File(filename=filename, md5='gg'))
-    return package
 
 
 class TestDownloadPackage(object):
