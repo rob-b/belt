@@ -102,16 +102,16 @@ def package_releases(package, location=None, client=None):
     client = client or get_xmlrpc_client()
     logger.debug('Obtaining releases for ' + package)
     for version in client.package_releases(package, True):
+        rel = models.Release(version=version)
         logger.debug('Found {}-{}'.format(package, version))
         for pkg_data in client.release_urls(package, version):
-            rel = models.Release(version=version)
             rel_file = models.File(md5=pkg_data['md5_digest'],
                                    download_url=pkg_data['url'],
                                    location=location or u'',
                                    filename=pkg_data['filename'],
                                    kind=pkg_data['python_version'])
             rel.files.append(rel_file)
-            yield rel
+        yield rel
 
 
 def release_union(releases):

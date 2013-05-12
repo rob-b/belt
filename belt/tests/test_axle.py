@@ -48,15 +48,26 @@ def test_split_package_name_detects_name(package, name_and_version):
 
 belt_pkg_data = [
     {'comment_text': '',
-     'downloads': 133,
-     'filename': 'belt-0.4.zip',
+     'downloads': 120,
+     'filename': 'belt-0.5.tar.gz',
      'has_sig': False,
-     'md5_digest': 'eea30ff3dc9b52c6658f7657c6dd10b5',
+     'md5_digest': '5cdf19d11ccd9f3cb0becb3f07284ce1',
      'packagetype': 'sdist',
      'python_version': 'source',
-     'size': 25988,
-     'upload_time': '2002-01-01',
-     'url': 'https://pypi.python.org/packages/source/b/belt/belt-0.4.zip'}]
+     'size': 26173,
+     'upload_time': '20130506T21:05:11',
+     'url':
+     'http://pypi.python.org/packages/source/b/belt/belt-0.5.tar.gz'},
+    {'comment_text': '',
+     'downloads': 133,
+     'filename': 'belt-0.5.zip',
+     'has_sig': False,
+     'md5_digest': 'f7429b4f1ca327102e001f91928b23be',
+     'packagetype': 'sdist',
+     'python_version': 'source',
+     'size': 35259,
+     'upload_time': '20130506T21:05:11',
+     'url': 'http://pypi.python.org/packages/source/b/belt/belt-0.5.zip'}]
 
 
 class TestGetReleaseData(object):
@@ -64,18 +75,22 @@ class TestGetReleaseData(object):
     def test_sets_release_version(self):
         from ..axle import package_releases
         client = (fudge.Fake('client')
-                  .expects('release_urls').returns(belt_pkg_data)
-                  .expects('package_releases').returns(['0.1']))
+                  .expects('release_urls').with_args('belt', '0.5')
+                  .returns(belt_pkg_data)
+                  .expects('package_releases').with_args('belt', True)
+                  .returns(['0.5']))
         release, = package_releases('belt', client=client)
-        assert u'0.1' == release.version
+        assert u'0.5' == release.version
 
     def test_sets_release_file_md5(self):
         from ..axle import package_releases
         client = (fudge.Fake('client')
-                  .expects('release_urls').returns(belt_pkg_data)
-                  .expects('package_releases').returns(['0.1']))
+                  .expects('release_urls').with_args('belt', '0.3')
+                  .returns(belt_pkg_data)
+                  .expects('package_releases').with_args('belt', True)
+                  .returns(['0.3']))
         release, = package_releases('belt', client=client)
-        assert 'eea30ff3dc9b52c6658f7657c6dd10b5' == release.files[0].md5
+        assert 'f7429b4f1ca327102e001f91928b23be' == release.files[1].md5
 
     def test_returns_list_of_releases_to_add_to_package(self, db_session):
         from ..axle import package_releases

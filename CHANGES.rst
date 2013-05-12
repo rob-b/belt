@@ -1,7 +1,7 @@
 0.6 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Fix bug where not all files are stored for a release
 
 
 0.5 (2013-05-06)
