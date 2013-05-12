@@ -6,7 +6,6 @@ import logging
 import urllib2
 import xmlrpclib
 import subprocess
-import collections
 from wheel.install import WHEEL_INFO_RE
 
 
@@ -112,19 +111,3 @@ def package_releases(package, location=None, client=None):
                                    kind=pkg_data['python_version'])
             rel.files.append(rel_file)
         yield rel
-
-
-def release_union(releases):
-    keep = collections.defaultdict(list)
-    for rel in releases:
-        keep[rel.version].append(rel)
-
-    for v in keep.values():
-        yield sorted(v, key=lambda i: i.id, reverse=True)[0]
-
-
-def create_release(version, url):
-    from belt import models
-    from belt.utils import get_package_from_pypi
-    pkg = get_package_from_pypi(url)
-    rel = models.Release(version=version, download_url=url)
