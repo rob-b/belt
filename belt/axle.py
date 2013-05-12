@@ -109,5 +109,5 @@ def package_releases(package, location=None, client=None):
                                    location=location or u'',
                                    filename=pkg_data['filename'],
                                    kind=pkg_data['python_version'])
-            rel.files.append(rel_file)
+            rel.files.add(rel_file)
         yield rel

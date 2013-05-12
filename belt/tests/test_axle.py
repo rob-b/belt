@@ -90,7 +90,12 @@ class TestGetReleaseData(object):
                   .expects('package_releases').with_args('belt', True)
                   .returns(['0.3']))
         release, = package_releases('belt', client=client)
-        assert 'f7429b4f1ca327102e001f91928b23be' == release.files[1].md5
+
+        # NOTE releases.files is a set object and so order cannot be
+        # determined which mean we have to iterate to ensure the md5 is set to
+        # one of the relations
+        assert 'f7429b4f1ca327102e001f91928b23be' in [f.md5 for f in
+                                                      release.files]
 
     def test_returns_list_of_releases_to_add_to_package(self, db_session):
         from ..axle import package_releases
@@ -101,7 +106,7 @@ class TestGetReleaseData(object):
         db_session.add(pkg)
 
         releases = package_releases('belt', client=client)
-        pkg.releases.extend(list(releases))
+        pkg.releases.update(list(releases))
         pkg = db_session.query(models.Package).filter_by(name='belt').one()
         assert 1 == len(pkg.releases)
 
@@ -113,14 +118,14 @@ class TestGetReleaseData(object):
 
         # add a package named belt with a 0.1 release
         pkg = models.Package(name=u'belt')
-        pkg.releases.append(models.Release(version=u'0.1'))
+        pkg.releases.add(models.Release(version=u'0.1'))
         db_session.add(pkg)
 
         releases = package_releases('belt', client=client)
 
         # add the returned packages and flushing should cause an
         # IntegrityError because of two releases of the same name
-        pkg.releases.extend(list(releases))
+        pkg.releases.update(list(releases))
 
         with py.test.raises(exc.IntegrityError):
             db_session.flush()

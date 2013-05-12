@@ -67,8 +67,8 @@ def create_package(path, content=u''):
 
     package = models.Package(name=name)
     rel = models.Release(version=version)
-    package.releases.append(rel)
-    rel.files.append(models.File(filename=filename, md5='gg'))
+    package.releases.add(rel)
+    rel.files.add(models.File(filename=filename, md5='gg'))
     return package
 
 
@@ -215,7 +215,7 @@ class TestPackageList(object):
         rel = Fake('Release').has_attr(version='106')
         package_releases.expects_call().with_args('quux', location=arg.any()).returns([rel])
 
-        pkg = (Fake('pkg').has_attr(name='quux', releases=[]))
+        pkg = (Fake('pkg').has_attr(name='quux', releases=set()))
         Package.expects('by_name').with_args('quux').returns(pkg)
         DBSession.expects('add').with_args(pkg)
 
