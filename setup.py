@@ -35,6 +35,7 @@ requires = [
     'wheel',
     'distribute',
     'psycopg2',
+    'Delorean',
 ]
 
 test_requires = [
