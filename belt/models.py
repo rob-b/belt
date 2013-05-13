@@ -28,6 +28,7 @@ class CaseInsensitiveComparator(Comparator):
 class Package(Base):
 
     __tablename__ = 'package'
+    __mapper_args__ = {'order_by': 'name'}
     id = Column(Integer, primary_key=True)
     name = Column(Text, unique=True)
     releases = relationship('Release', backref='package',
