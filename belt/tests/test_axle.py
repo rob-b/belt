@@ -36,6 +36,28 @@ def test_doesnt_overwrite_existing_wheels(tmpdir):
         copy_wheels_to_pypi(wheel_dir=str(tmpdir), local_pypi=str(local_pypi))
 
 
+def test_wheel_creates_files_with_underscores(tmpdir):
+    from ..axle import copy_wheels_to_pypi
+    local_pypi = tmpdir.mkdir('local')
+
+    # create wheel with an underscore in the package name
+    built_wheel = tmpdir.join('foo_zle-12.4-py27-none-any.whl')
+    built_wheel.write('')
+
+    # create a package with a hyphen in the package name
+    package = local_pypi.mkdir('foo-zle').join('foo-zle-12.4.zip')
+    package.write('')
+
+    copy_wheels_to_pypi(wheel_dir=str(tmpdir), local_pypi=str(local_pypi))
+
+    basename = os.path.basename(str(built_wheel))
+    dirname = os.path.dirname(str(package))
+
+    # the wheel should be copied to the package directory even though the
+    # names do not match
+    assert os.path.exists(os.path.join(dirname, basename))
+
+
 @pytest.mark.parametrize(('package', 'name_and_version'), [
     ('bump-0.1.0.tar.gz', ('bump', '0.1.0')),
     ('fudge-22.1.4.zip', ('fudge', '22.1.4')),
