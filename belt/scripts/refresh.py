@@ -16,7 +16,7 @@ from pyramid.paster import (
 )
 
 
-def main():
+def main(location):
 
     with transaction.manager:
         for package in refresh_packages(datetime.datetime(2013, 5, 5)):
@@ -29,4 +29,4 @@ if __name__ == "__main__":
     settings = get_appsettings(config_uri)
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
-    main()
+    main(settings['local_packages'])
