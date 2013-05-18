@@ -26,14 +26,7 @@ def strptime(value):
 
 
 def main(location, older_than, session):
-
-    packages = list(refresh_packages(session, older_than, location))
-    suffix = '' if len(packages) == 1 else 's'
-    msg = u'{} release{} unmodified since {} found'.format(len(packages),
-                                                           suffix,
-                                                           older_than.isoformat())
-    log.info(msg)
-    for package in packages:
+    for package in refresh_packages(session, older_than, location):
         log.info(u'Updated ' + unicode(package))
         session.commit()
 
