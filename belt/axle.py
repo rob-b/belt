@@ -124,11 +124,14 @@ def get_package_name(name, client=None):
     return urllib2.urlopen(r).geturl().split('/')[-2]
 
 
-def package_releases(package, location, client=None):
+def package_releases(package, location, skip_versions=None, client=None):
     from belt import models
     client = client or get_xmlrpc_client()
+    skip_versions = skip_versions or []
     logger.debug('Obtaining releases for ' + package)
     for version in client.package_releases(package, True):
+        if version in skip_versions:
+            continue
         rel = models.Release(version=version)
         logger.debug('Found {}-{}'.format(package, version))
         for pkg_data in client.release_urls(package, version):

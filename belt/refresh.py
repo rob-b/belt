@@ -23,7 +23,7 @@ def refresh_packages(session, last_modified_at, location):
         versions = [r.version for r in package.releases]
 
         package_location = os.path.join(location, package.name)
-        for rel in package_releases(package.name, package_location):
+        for rel in package_releases(package.name, package_location, versions):
             if rel.version not in versions:
                 package.releases.add(release)
         yield package
