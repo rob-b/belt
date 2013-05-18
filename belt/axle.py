@@ -1,12 +1,12 @@
 import re
 import os
+import glob
 import errno
 import shutil
 import logging
 import urllib2
 import xmlrpclib
 import subprocess
-import collections
 from wheel.install import WHEEL_INFO_RE
 
 
@@ -41,6 +41,35 @@ def split_package_name(name):
     return pkg_name, version
 
 
+class WheelDestination(object):
+
+    def __init__(self, local_pypi, name, version):
+        self.local_pypi = local_pypi
+        self.name = name
+        self.version = version
+        self._path = None
+
+    @property
+    def path(self):
+        if self._path is None:
+            # # wheel converts hyphens in package names into underscores and
+            # so # there may be a cov-core dir that already exists but just
+            # going by # the wheel name we'd create cov_core
+            package_dir = os.path.join(self.local_pypi, self.name)
+
+            hyphenated = self.name.replace('_', '-')
+            possible = os.path.join(self.local_pypi, hyphenated)
+            if os.path.exists(possible):
+                stem = '{}-{}'.format(hyphenated, self.version)
+                stem = os.path.join(possible, stem)
+
+                alt = (possible for ca in glob.iglob(possible + '/*') if
+                       ARCHIVE_SUFFIX.sub('', ca) == stem)
+                package_dir = next(alt, package_dir)
+            self._path = package_dir
+        return self._path
+
+
 def copy_wheels_to_pypi(wheel_dir, local_pypi):
 
     for wheel in os.listdir(wheel_dir):
@@ -49,15 +78,13 @@ def copy_wheels_to_pypi(wheel_dir, local_pypi):
             continue
         tags = match.groupdict()
         path_to_wheel = os.path.abspath(os.path.join(wheel_dir, wheel))
+        wheel_destination = WheelDestination(local_pypi, tags['name'], tags['ver'])
+        local_wheel = os.path.join(wheel_destination.path, os.path.basename(path_to_wheel))
 
-        package_dir = os.path.join(local_pypi, tags['name'])
-        local_wheel = os.path.join(package_dir, os.path.basename(path_to_wheel))
-
-        # TODO Should we create md5s as we do with source packages?
         if os.path.exists(local_wheel):
             continue
 
-        mkdir_p(package_dir)
+        mkdir_p(wheel_destination.path)
         shutil.copyfile(path_to_wheel, local_wheel)
 
 
@@ -97,34 +124,21 @@ def get_package_name(name, client=None):
     return urllib2.urlopen(r).geturl().split('/')[-2]
 
 
-def package_releases(package, location=None, client=None):
+def package_releases(package, location, skip_versions=None, client=None):
     from belt import models
     client = client or get_xmlrpc_client()
+    skip_versions = skip_versions or []
     logger.debug('Obtaining releases for ' + package)
     for version in client.package_releases(package, True):
+        if version in skip_versions:
+            continue
         rel = models.Release(version=version)
         logger.debug('Found {}-{}'.format(package, version))
         for pkg_data in client.release_urls(package, version):
             rel_file = models.File(md5=pkg_data['md5_digest'],
                                    download_url=pkg_data['url'],
-                                   location=location or u'',
+                                   location=location,
                                    filename=pkg_data['filename'],
                                    kind=pkg_data['python_version'])
-            rel.files.append(rel_file)
+            rel.files.add(rel_file)
         yield rel
-
-
-def release_union(releases):
-    keep = collections.defaultdict(list)
-    for rel in releases:
-        keep[rel.version].append(rel)
-
-    for v in keep.values():
-        yield sorted(v, key=lambda i: i.id, reverse=True)[0]
-
-
-def create_release(version, url):
-    from belt import models
-    from belt.utils import get_package_from_pypi
-    pkg = get_package_from_pypi(url)
-    rel = models.Release(version=version, download_url=url)

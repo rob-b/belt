@@ -7,7 +7,7 @@ from pyramid.response import FileResponse
 from pyramid.httpexceptions import (HTTPNotFound,
                                     HTTPMovedPermanently, status_map)
 
-from .utils import (get_package, pypi_url, get_package_from_pypi,
+from .utils import (get_package, get_package_from_pypi,
                     store_locally, convert_url_to_pypi)
 
 from sqlalchemy.orm import exc
@@ -68,7 +68,7 @@ def package_list(request):
         for rel in package_releases(pkg.name,
                                     location=os.path.join(package_dir, pkg.name)):
             release = releases.setdefault(rel.version, rel)
-            pkg.releases.append(release)
+            pkg.releases.add(release)
         DBSession.add(pkg)
 
     if name != pkg.name:
@@ -122,7 +122,7 @@ def download_package(request):
             rel = Release.for_package(name, version)
         except exc.NoResultFound:
             rel = Release(version=version)
-        rel.files.append(rel_file)
+        rel.files.add(rel_file)
         if not rel.package:
             pkg, _ = get_or_create(DBSession, Package, name=name)
             rel.package = pkg
@@ -132,7 +132,8 @@ def download_package(request):
     if ask_pypi or not os.path.exists(rel_file.fullpath):
 
         try:
-            fo = get_package_from_pypi(rel_file.download_url)
+            url = rel_file.download_url
+            fo = get_package_from_pypi(url)
         except urllib2.URLError as err:
             log.exception(download_error_msg(err, package,
                                              rel_file.download_url))

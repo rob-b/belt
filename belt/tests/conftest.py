@@ -1,7 +1,6 @@
 import os
 import pytest
 from belt import models
-from httpretty import HTTPretty
 from pyramid.paster import get_appsettings
 from pyramid import testing
 from sqlalchemy import engine_from_config
@@ -12,6 +11,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
 @pytest.fixture
 def http(request):
+    from httpretty import HTTPretty
     HTTPretty.reset()
     HTTPretty.enable()
     request.addfinalizer(HTTPretty.disable)

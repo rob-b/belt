@@ -8,7 +8,7 @@ from belt.axle import split_package_name, mkdir_p
 
 def _pipcache():
     import argparse
-    desc = 'Copy PIP_DOWNLOAD_CACHE to pypi dir'
+    desc = 'Copy contents of PIP_DOWNLOAD_CACHE to pypi directory'
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('--pip-download-cache',
                         help='Directory packages can be found in',
@@ -21,6 +21,7 @@ def _pipcache():
 
 
 def pipcache(pip_download_cache, pypi_dir):
+    """Copy files from pip download cache to the local pypi directory"""
     pip_download_cache = pip_download_cache.rstrip('/')
     md5_re = re.compile(r'\?md5=\w*$')
     for fn in glob.iglob(pip_download_cache + '/*'):

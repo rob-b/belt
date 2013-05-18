@@ -36,6 +36,28 @@ def test_doesnt_overwrite_existing_wheels(tmpdir):
         copy_wheels_to_pypi(wheel_dir=str(tmpdir), local_pypi=str(local_pypi))
 
 
+def test_wheel_creates_files_with_underscores(tmpdir):
+    from ..axle import copy_wheels_to_pypi
+    local_pypi = tmpdir.mkdir('local')
+
+    # create wheel with an underscore in the package name
+    built_wheel = tmpdir.join('foo_zle-12.4-py27-none-any.whl')
+    built_wheel.write('')
+
+    # create a package with a hyphen in the package name
+    package = local_pypi.mkdir('foo-zle').join('foo-zle-12.4.zip')
+    package.write('')
+
+    copy_wheels_to_pypi(wheel_dir=str(tmpdir), local_pypi=str(local_pypi))
+
+    basename = os.path.basename(str(built_wheel))
+    dirname = os.path.dirname(str(package))
+
+    # the wheel should be copied to the package directory even though the
+    # names do not match
+    assert os.path.exists(os.path.join(dirname, basename))
+
+
 @pytest.mark.parametrize(('package', 'name_and_version'), [
     ('bump-0.1.0.tar.gz', ('bump', '0.1.0')),
     ('fudge-22.1.4.zip', ('fudge', '22.1.4')),
@@ -79,7 +101,7 @@ class TestGetReleaseData(object):
                   .returns(belt_pkg_data)
                   .expects('package_releases').with_args('belt', True)
                   .returns(['0.5']))
-        release, = package_releases('belt', client=client)
+        release, = package_releases('belt', location='/', client=client)
         assert u'0.5' == release.version
 
     def test_sets_release_file_md5(self):
@@ -89,8 +111,13 @@ class TestGetReleaseData(object):
                   .returns(belt_pkg_data)
                   .expects('package_releases').with_args('belt', True)
                   .returns(['0.3']))
-        release, = package_releases('belt', client=client)
-        assert 'f7429b4f1ca327102e001f91928b23be' == release.files[1].md5
+        release, = package_releases('belt', location='/', client=client)
+
+        # NOTE releases.files is a set object and so order cannot be
+        # determined which mean we have to iterate to ensure the md5 is set to
+        # one of the relations
+        assert 'f7429b4f1ca327102e001f91928b23be' in [f.md5 for f in
+                                                      release.files]
 
     def test_returns_list_of_releases_to_add_to_package(self, db_session):
         from ..axle import package_releases
@@ -100,8 +127,8 @@ class TestGetReleaseData(object):
         pkg = models.Package(name=u'belt')
         db_session.add(pkg)
 
-        releases = package_releases('belt', client=client)
-        pkg.releases.extend(list(releases))
+        releases = package_releases('belt', location='/', client=client)
+        pkg.releases.update(list(releases))
         pkg = db_session.query(models.Package).filter_by(name='belt').one()
         assert 1 == len(pkg.releases)
 
@@ -113,58 +140,14 @@ class TestGetReleaseData(object):
 
         # add a package named belt with a 0.1 release
         pkg = models.Package(name=u'belt')
-        pkg.releases.append(models.Release(version=u'0.1'))
+        pkg.releases.add(models.Release(version=u'0.1'))
         db_session.add(pkg)
 
-        releases = package_releases('belt', client=client)
+        releases = package_releases('belt', location='/', client=client)
 
         # add the returned packages and flushing should cause an
         # IntegrityError because of two releases of the same name
-        pkg.releases.extend(list(releases))
+        pkg.releases.update(list(releases))
 
         with py.test.raises(exc.IntegrityError):
             db_session.flush()
-
-
-def eq_(a, b):
-    assert a == b
-
-
-class TestReleaseUnion(object):
-
-    def test_removes_release_with_duplicate_version(self):
-        from ..axle import release_union
-
-        releases = (models.Release(version=u'1.2.4'),
-                    models.Release(version=u'1.2.4'))
-
-        releases = release_union(releases)
-
-        assert 1 == len(list(releases))
-
-    def test_retains_releases_with_distinct_versions(self):
-        from ..axle import release_union
-
-        releases = (models.Release(version=u'1.2.4'),
-                    models.Release(version=u'1.2.5'))
-        expected = [u'1.2.4', u'1.2.5']
-
-        releases = release_union(releases)
-
-        for expect, got in itertools.izip_longest(expected, releases):
-            yield eq_, expect, got.version
-
-    def test_prefers_releases_with_ids(self, db_session):
-        from ..axle import release_union
-
-        pkg = models.Package(name=u'belt')
-        pkg.releases.append(models.Release(version=u'1.2.4'))
-
-        releases = (models.Release(version=u'1.2.4'),
-                    models.Release(version=u'1.2.4'),
-                    pkg.releases[0])
-        db_session.add(pkg)
-        db_session.flush()
-
-        release, = release_union(releases)
-        assert release.id is not None

@@ -2,6 +2,8 @@
 ----------------
 
 - Fix bug where not all files are stored for a release
+- Add `refresh` command that checks for newer versions of all locally stored
+  package releases
 
 
 0.5 (2013-05-06)

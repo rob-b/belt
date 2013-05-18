@@ -35,11 +35,12 @@ requires = [
     'wheel',
     'distribute',
     'psycopg2',
+    'Delorean',
 ]
 
 test_requires = [
     'fudge',
-    'httpretty',
+    'pytest-blockage',
     'pytest-cov',
     'pytest',
 ]
