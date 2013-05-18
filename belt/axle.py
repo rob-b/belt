@@ -124,7 +124,7 @@ def get_package_name(name, client=None):
     return urllib2.urlopen(r).geturl().split('/')[-2]
 
 
-def package_releases(package, location=None, client=None):
+def package_releases(package, location, client=None):
     from belt import models
     client = client or get_xmlrpc_client()
     logger.debug('Obtaining releases for ' + package)
@@ -134,7 +134,7 @@ def package_releases(package, location=None, client=None):
         for pkg_data in client.release_urls(package, version):
             rel_file = models.File(md5=pkg_data['md5_digest'],
                                    download_url=pkg_data['url'],
-                                   location=location or u'',
+                                   location=location,
                                    filename=pkg_data['filename'],
                                    kind=pkg_data['python_version'])
             rel.files.add(rel_file)
