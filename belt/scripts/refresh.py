@@ -10,7 +10,7 @@ from pyramid.paster import (
 )
 
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('belt.scripts.refresh')
 
 
 def strptime(value):
@@ -19,12 +19,21 @@ def strptime(value):
     except ValueError:
         msg = u'{} is not in YYYY-MM-DD format'.format(value)
         raise argparse.ArgumentTypeError(msg)
+
+    if value.date() == datetime.date.today():
+        value = value + datetime.timedelta(seconds=86399),
     return value
 
 
 def main(location, older_than, session):
 
-    for package in refresh_packages(session, older_than, location):
+    packages = list(refresh_packages(session, older_than, location))
+    suffix = '' if len(packages) == 1 else 's'
+    msg = u'{} release{} unmodified since {} found'.format(len(packages),
+                                                           suffix,
+                                                           older_than.isoformat())
+    log.info(msg)
+    for package in packages:
         log.info(u'Updated ' + unicode(package))
         session.commit()
 
