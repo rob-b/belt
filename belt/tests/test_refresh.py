@@ -64,7 +64,7 @@ class TestRefreshPackages(object):
 
         with fudge.patch('belt.refresh.package_releases') as package_releases:
             (package_releases.expects_call()
-             .with_args('lemon', '/na/lemon').returns([]))
+             .with_args('lemon', '/na/lemon', ['1.4', '1.2.3']).returns([]))
 
             package = list(refresh_packages(db_session,
                                             datetime.datetime.utcnow(),

@@ -101,7 +101,7 @@ class TestGetReleaseData(object):
                   .returns(belt_pkg_data)
                   .expects('package_releases').with_args('belt', True)
                   .returns(['0.5']))
-        release, = package_releases('belt', client=client)
+        release, = package_releases('belt', location='/', client=client)
         assert u'0.5' == release.version
 
     def test_sets_release_file_md5(self):
@@ -111,7 +111,7 @@ class TestGetReleaseData(object):
                   .returns(belt_pkg_data)
                   .expects('package_releases').with_args('belt', True)
                   .returns(['0.3']))
-        release, = package_releases('belt', client=client)
+        release, = package_releases('belt', location='/', client=client)
 
         # NOTE releases.files is a set object and so order cannot be
         # determined which mean we have to iterate to ensure the md5 is set to
@@ -127,7 +127,7 @@ class TestGetReleaseData(object):
         pkg = models.Package(name=u'belt')
         db_session.add(pkg)
 
-        releases = package_releases('belt', client=client)
+        releases = package_releases('belt', location='/', client=client)
         pkg.releases.update(list(releases))
         pkg = db_session.query(models.Package).filter_by(name='belt').one()
         assert 1 == len(pkg.releases)
@@ -143,7 +143,7 @@ class TestGetReleaseData(object):
         pkg.releases.add(models.Release(version=u'0.1'))
         db_session.add(pkg)
 
-        releases = package_releases('belt', client=client)
+        releases = package_releases('belt', location='/', client=client)
 
         # add the returned packages and flushing should cause an
         # IntegrityError because of two releases of the same name
