@@ -48,6 +48,9 @@ class TestOutdatedReleases(object):
         assert 1 == len(releases)
 
 
+version_order = lambda vs: sorted(list(vs)) == ['1.2.3', '1.4']
+
+
 class TestRefreshPackages(object):
 
     def test_updates_package_release_modified(self, db_session, tmpdir):
@@ -64,7 +67,8 @@ class TestRefreshPackages(object):
 
         with fudge.patch('belt.refresh.package_releases') as package_releases:
             (package_releases.expects_call()
-             .with_args('lemon', '/na/lemon', ['1.4', '1.2.3']).returns([]))
+             .with_args('lemon', '/na/lemon', arg.passes_test(version_order))
+             .returns([]))
 
             package = list(refresh_packages(db_session,
                                             datetime.datetime.utcnow(),
