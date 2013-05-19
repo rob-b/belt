@@ -17,6 +17,14 @@ or::
     pip install belt
 
 
+Development uses git-flow naming conventions. Also be sure to run::
+
+    ln -fs "$(pwd)/pre-push.sh" .git/hooks/pre-push
+
+to install the git pre-push hook that refuses to push to develop
+or master when all tests do not pass.
+
+
 Create a config file setting `local_packages` to wherever you want to store
 your locally cached packages::
 
