@@ -1,6 +1,47 @@
 import os
 from belt.axle import split_package_name
 from belt import models
+from fudge import patch as fudge_patch
+import functools
+import sys
+
+
+def wraps(func):
+    def inner(f):
+        f = functools.wraps(func)(f)
+        original = getattr(func, '__wrapped__', func)
+        f.__wrapped__ = original
+        return f
+    return inner
+
+
+class patch(fudge_patch):
+
+    def __call__(self, fn):
+
+        @wraps(fn)
+        def caller(*args, **kw):
+            fakes = self.__enter__()
+            if not isinstance(fakes, (tuple, list)):
+                fakes = [fakes]
+            args += tuple(fakes)
+            value = None
+            try:
+                value = fn(*args, **kw)
+            except:
+                etype, val, tb = sys.exc_info()
+                self.__exit__(etype, val, tb)
+                raise etype, val, tb
+            else:
+                self.__exit__(None, None, None)
+            return value
+
+        # py.test uses the length of mock.patchings to determine how many
+        # arguments to ignore when performing its dependency injection
+        if not hasattr(caller, 'patchings'):
+            caller.patchings = []
+        caller.patchings.extend([1 for path in self.obj_paths])
+        return caller
 
 
 def _create_package(path, content=u''):
