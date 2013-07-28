@@ -38,3 +38,4 @@ belt.sqlite
 test.sqlite
 htmlcov
 production.ini
+logs
