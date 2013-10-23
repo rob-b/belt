@@ -1,0 +1,14 @@
+---
+user: ubuntu
+group: admin
+home: /home/ubuntu
+project_name: belt
+application_dir: /srv/belt
+initial_user: ubuntu
+database_name: belt
+database_user: belt
+nginx_upstream_name: belt_wsgi_upstream
+virtualenv_bin_path: /home/ubuntu/.virtualenvs/belt/bin
+vm: False
+web_process_user: ubuntu
+hostname: belt

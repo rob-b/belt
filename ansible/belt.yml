@@ -1,0 +1,30 @@
+---
+- hosts: webservers
+  sudo: yes
+  user: $user
+
+  tasks:
+  - name: Create application directory
+    file: path=$application_dir state=directory
+    tags: application
+
+  - name: Set application dir permissions
+    file: path=$application_dir state=directory owner=$user group=$group
+    tags: application
+    when: not vm
+
+  - name: Create application logs dir
+    file: path=$application_dir/logs state=directory
+    tags: application
+
+  - name: Install gunicorn
+    pip: name=gunicorn state=latest virtualenv=$home/.virtualenvs/$project_name use_mirrors=no
+    tags: application
+
+  - name: Add upstart conf
+    template: dest=/etc/init/${project_name}.conf src=templates/upstart.conf
+    tags: application
+
+  - name: Add static files directory
+    file: dest=/srv/static/$project_name state=directory owner=$user group=www-data
+    tags: application
