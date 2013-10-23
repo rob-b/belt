@@ -52,9 +52,9 @@ class WheelDestination(object):
     @property
     def path(self):
         if self._path is None:
-            # # wheel converts hyphens in package names into underscores and
-            # so # there may be a cov-core dir that already exists but just
-            # going by # the wheel name we'd create cov_core
+            # wheel converts hyphens in package names into underscores and
+            # so there may be a cov-core dir that already exists but just
+            # going by the wheel name we'd create cov_core
             package_dir = os.path.join(self.local_pypi, self.name)
 
             hyphenated = self.name.replace('_', '-')
