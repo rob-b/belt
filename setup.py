@@ -36,6 +36,7 @@ requires = [
     'distribute',
     'psycopg2',
     'Delorean',
+    'httpretty',
 ]
 
 test_requires = [
