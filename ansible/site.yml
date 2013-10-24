@@ -1,0 +1,37 @@
+---
+- hosts: all
+  user: $initial_user
+  sudo: yes
+  roles:
+    - common
+
+- hosts: webservers
+  user: $user
+  sudo: yes
+  roles:
+    - virtualenv
+    - nginx
+
+- hosts: dbservers
+  user: $user
+  sudo: yes
+  roles:
+    - postgresql
+    - wal-e
+
+- hosts: dbservers
+  user: $user
+  sudo: yes
+  sudo_user: postgres
+
+  tasks:
+    - name: Add postgres user
+      postgresql_user: user=$database_name password=$database_password
+
+    - name: Add postgres db
+      postgresql_db: db=$database_name owner=$database_user state=present encoding='UTF-8' template='template0' lc_collate='en_US.utf8' lc_ctype='en_US.utf8'
+
+    - name: Add test postgres db
+      postgresql_db: db=${database_name}_test owner=$database_user state=present encoding='UTF-8' template='template0' lc_collate='en_US.utf8' lc_ctype='en_US.utf8'
+
+- include: belt.yml

@@ -1,0 +1,29 @@
+---
+- hosts: all
+  user: '{{ initial_user }}'
+  sudo: yes
+
+  # to work with vagrant controlling the connection we need to create our user
+  # and add vagrant's ssh key to that user's authorized_keys file
+  tasks:
+  - name: Create group.
+    group: name=${group} system=yes state=present
+
+  - name: Create user.
+    user: name=${user} group=${group} shell=/bin/zsh state=present
+
+  - name: Create user's ssh directory
+    file: path=$home/.ssh/ owner=$user group=$group mode=0700 state=directory
+
+  - name: Copy vagrants insecure key over to new user
+    command: /bin/cp /home/vagrant/.ssh/authorized_keys $home/.ssh/authorized_keys creates=$home/.ssh/authorized_keys
+
+  - name: Set correct permissions on user's ssh/authorized_keys file
+    file: path=$home/.ssh/authorized_keys owner=$user group=$group mode=0600 state=file
+
+  - name: Add our key to vagrant's authorized_key file
+    action: authorized_key user=vagrant key='$FILE(id_rsa.pub)'
+  - action: authorized_key user=$user key='$FILE(id_rsa.pub)'
+
+# now call the actual, non-hacky playbooks
+- include: site.yml

@@ -1,0 +1,6 @@
+---
+- hosts: wal-e-recovery
+  user: $user
+  sudo: yes
+  roles:
+    - wal-e-recovery
