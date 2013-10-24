@@ -2,6 +2,7 @@
 user: ubuntu
 group: admin
 home: /home/ubuntu
+shell: /bin/zsh
 project_name: belt
 application_dir: /srv/belt
 initial_user: ubuntu
