@@ -38,3 +38,8 @@ belt.sqlite
 test.sqlite
 htmlcov
 production.ini
+logs
+.vagrant
+ansible/sourcebuilds.yml
+ansible/dotfiles.yml
+id_rsa.pub

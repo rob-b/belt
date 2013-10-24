@@ -1,10 +1,10 @@
 import os
-import itertools
 import fudge
 import pytest
 import py.test
 from belt import models
 from sqlalchemy import exc
+from belt.axle import package_releases
 
 
 def test_move_wheels_to_pypi_dir(tmpdir):
@@ -36,6 +36,54 @@ def test_doesnt_overwrite_existing_wheels(tmpdir):
         copy_wheels_to_pypi(wheel_dir=str(tmpdir), local_pypi=str(local_pypi))
 
 
+def test_wheel_creates_files_with_underscores(tmpdir):
+    from ..axle import copy_wheels_to_pypi
+    local_pypi = tmpdir.mkdir('local')
+
+    # create wheel with an underscore in the package name
+    built_wheel = tmpdir.join('foo_zle-12.4-py27-none-any.whl')
+    built_wheel.write('')
+
+    # create a package with a hyphen in the package name
+    package = local_pypi.mkdir('foo-zle').join('foo-zle-12.4.zip')
+    package.write('')
+
+    copy_wheels_to_pypi(wheel_dir=str(tmpdir), local_pypi=str(local_pypi))
+
+    basename = os.path.basename(str(built_wheel))
+    dirname = os.path.dirname(str(package))
+
+    # the wheel should be copied to the package directory even though the
+    # names do not match
+    assert os.path.exists(os.path.join(dirname, basename))
+
+
+def test_get_all_wheels(tmpdir):
+    from ..axle import get_all_wheels
+    wheel_dir = tmpdir.mkdir('local')
+    wheel = wheel_dir.join('foo_zle-12.4-py27-none-any.whl')
+    wheel.write('')
+    found_wheel, = list(get_all_wheels(str(wheel_dir)))
+    assert str(wheel) == found_wheel.path
+
+
+def test_add_generated_wheels_to_release(tmpdir, db_session):
+    from ..axle import add_generated_wheels_to_releases
+
+    wheel_dir = tmpdir.mkdir('local')
+    wheel = wheel_dir.join('belt-2.5-py27-none-any.whl')
+    wheel.write('')
+
+    pkg = models.Package(name=u'belt')
+    pkg.releases.add(models.Release(version=u'2.5'))
+    db_session.add(pkg)
+    add_generated_wheels_to_releases(db_session, str(wheel_dir), '/var')
+
+    release, = pkg.releases
+    file, = release.files
+    assert '/var/belt-2.5-py27-none-any.whl' == file.fullpath
+
+
 @pytest.mark.parametrize(('package', 'name_and_version'), [
     ('bump-0.1.0.tar.gz', ('bump', '0.1.0')),
     ('fudge-22.1.4.zip', ('fudge', '22.1.4')),
@@ -48,108 +96,80 @@ def test_split_package_name_detects_name(package, name_and_version):
 
 belt_pkg_data = [
     {'comment_text': '',
-     'downloads': 133,
-     'filename': 'belt-0.4.zip',
+     'downloads': 120,
+     'filename': 'belt-0.5.tar.gz',
      'has_sig': False,
-     'md5_digest': 'eea30ff3dc9b52c6658f7657c6dd10b5',
+     'md5_digest': '5cdf19d11ccd9f3cb0becb3f07284ce1',
      'packagetype': 'sdist',
      'python_version': 'source',
-     'size': 25988,
-     'upload_time': '2002-01-01',
-     'url': 'https://pypi.python.org/packages/source/b/belt/belt-0.4.zip'}]
+     'size': 26173,
+     'upload_time': '20130506T21:05:11',
+     'url':
+     'http://pypi.python.org/packages/source/b/belt/belt-0.5.tar.gz'},
+    {'comment_text': '',
+     'downloads': 133,
+     'filename': 'belt-0.5.zip',
+     'has_sig': False,
+     'md5_digest': 'f7429b4f1ca327102e001f91928b23be',
+     'packagetype': 'sdist',
+     'python_version': 'source',
+     'size': 35259,
+     'upload_time': '20130506T21:05:11',
+     'url': 'http://pypi.python.org/packages/source/b/belt/belt-0.5.zip'}]
 
 
 class TestGetReleaseData(object):
 
     def test_sets_release_version(self):
-        from ..axle import package_releases
         client = (fudge.Fake('client')
-                  .expects('release_urls').returns(belt_pkg_data)
-                  .expects('package_releases').returns(['0.1']))
-        release, = package_releases('belt', client=client)
-        assert u'0.1' == release.version
+                  .expects('release_urls').with_args('belt', '0.5')
+                  .returns(belt_pkg_data)
+                  .expects('package_releases').with_args('belt', True)
+                  .returns(['0.5']))
+        release, = package_releases('belt', location='/', client=client)
+        assert u'0.5' == release.version
 
     def test_sets_release_file_md5(self):
-        from ..axle import package_releases
         client = (fudge.Fake('client')
-                  .expects('release_urls').returns(belt_pkg_data)
-                  .expects('package_releases').returns(['0.1']))
-        release, = package_releases('belt', client=client)
-        assert 'eea30ff3dc9b52c6658f7657c6dd10b5' == release.files[0].md5
+                  .expects('release_urls').with_args('belt', '0.3')
+                  .returns(belt_pkg_data)
+                  .expects('package_releases').with_args('belt', True)
+                  .returns(['0.3']))
+        release, = package_releases('belt', location='/', client=client)
+
+        # NOTE releases.files is a set object and so order cannot be
+        # determined which mean we have to iterate to ensure the md5 is set to
+        # one of the relations
+        assert 'f7429b4f1ca327102e001f91928b23be' in [f.md5 for f in
+                                                      release.files]
 
     def test_returns_list_of_releases_to_add_to_package(self, db_session):
-        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').returns(belt_pkg_data)
                   .expects('package_releases').returns(['0.1']))
         pkg = models.Package(name=u'belt')
         db_session.add(pkg)
 
-        releases = package_releases('belt', client=client)
-        pkg.releases.extend(list(releases))
+        releases = package_releases('belt', location='/', client=client)
+        pkg.releases.update(list(releases))
         pkg = db_session.query(models.Package).filter_by(name='belt').one()
         assert 1 == len(pkg.releases)
 
     def test_release_list_does_not_guarantee_uniqueness(self, db_session):
-        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').returns(belt_pkg_data)
                   .expects('package_releases').returns(['0.1']))
 
         # add a package named belt with a 0.1 release
         pkg = models.Package(name=u'belt')
-        pkg.releases.append(models.Release(version=u'0.1'))
+        pkg.releases.add(models.Release(version=u'0.1'))
         db_session.add(pkg)
 
-        releases = package_releases('belt', client=client)
+        releases = package_releases('belt', location='/', client=client)
 
         # add the returned packages and flushing should cause an
         # IntegrityError because of two releases of the same name
-        pkg.releases.extend(list(releases))
+        pkg.releases.update(list(releases))
 
         with py.test.raises(exc.IntegrityError):
             db_session.flush()
-
-
-def eq_(a, b):
-    assert a == b
-
-
-class TestReleaseUnion(object):
-
-    def test_removes_release_with_duplicate_version(self):
-        from ..axle import release_union
-
-        releases = (models.Release(version=u'1.2.4'),
-                    models.Release(version=u'1.2.4'))
-
-        releases = release_union(releases)
-
-        assert 1 == len(list(releases))
-
-    def test_retains_releases_with_distinct_versions(self):
-        from ..axle import release_union
-
-        releases = (models.Release(version=u'1.2.4'),
-                    models.Release(version=u'1.2.5'))
-        expected = [u'1.2.4', u'1.2.5']
-
-        releases = release_union(releases)
-
-        for expect, got in itertools.izip_longest(expected, releases):
-            yield eq_, expect, got.version
-
-    def test_prefers_releases_with_ids(self, db_session):
-        from ..axle import release_union
-
-        pkg = models.Package(name=u'belt')
-        pkg.releases.append(models.Release(version=u'1.2.4'))
-
-        releases = (models.Release(version=u'1.2.4'),
-                    models.Release(version=u'1.2.4'),
-                    pkg.releases[0])
-        db_session.add(pkg)
-        db_session.flush()
-
-        release, = release_union(releases)
-        assert release.id is not None

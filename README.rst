@@ -2,7 +2,7 @@ Simple PyPI Proxy
 =================
 
 Belt is a simple PyPI proxy. Any packages that exist locally will be
-installed direct from disk, non-existent packages will be installed from PyPI
+installed direct from disk; non-existent packages will be installed from PyPI
 and stored locally for future use.
 
 The latest version is always available at `github.com/rob-b/belt
@@ -15,6 +15,14 @@ To install::
 or::
 
     pip install belt
+
+
+Development uses git-flow naming conventions. Also be sure to run::
+
+    ln -fs "$(pwd)/pre-push.sh" .git/hooks/pre-push
+
+to install the git pre-push hook that refuses to push to develop
+or master when all tests do not pass.
 
 
 Create a config file setting `local_packages` to wherever you want to store

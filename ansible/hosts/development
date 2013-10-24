@@ -1,0 +1,9 @@
+[webservers]
+127.0.0.1:2222 vm=True
+
+[dbservers]
+127.0.0.1:2222 vm=True
+
+[vagrant:children]
+webservers
+dbservers

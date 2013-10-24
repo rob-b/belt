@@ -28,26 +28,6 @@ def local_packages(packages_root):
             yield item
 
 
-def pypi_versions(package_page, url=None):
-    import lxml.html
-    html = lxml.html.fromstring(package_page)
-    if url:
-        html.make_links_absolute(url)
-    links = []
-    for elem, attr, link, pos in html.iterlinks():
-        if elem.tag != 'a':
-            continue
-        if elem.attrib.get('rel', '') == 'homepage':
-            continue
-        links.append(lxml.html.tostring(elem))
-    return links
-
-
-def pypi_package_page(url):
-    url = convert_url_to_pypi(url)
-    return get_url(url).read()
-
-
 def convert_url_to_pypi(url):
     # TODO define pypi url once only
     base = 'https://pypi.python.org'

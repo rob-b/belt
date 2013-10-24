@@ -35,17 +35,19 @@ requires = [
     'wheel',
     'distribute',
     'psycopg2',
+    'Delorean',
+    'httpretty',
 ]
 
 test_requires = [
     'fudge',
-    'httpretty',
+    'pytest-blockage',
     'pytest-cov',
     'pytest',
 ]
 
 setup(name='belt',
-      version='0.5',
+      version='0.6',
       description='belt',
       license='BSD',
       long_description=README + '\n\n' + CHANGES,

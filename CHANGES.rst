@@ -1,3 +1,12 @@
+0.6 (2013-10-24)
+----------------
+
+- createwheels command updates Release.files with any .whl files it creates
+- Fix bug where not all files are stored for a release
+- Add `refresh` command that checks for newer versions of all locally stored
+  package releases
+
+
 0.5 (2013-05-06)
 ----------------
 

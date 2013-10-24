@@ -28,9 +28,11 @@ class CaseInsensitiveComparator(Comparator):
 class Package(Base):
 
     __tablename__ = 'package'
+    __mapper_args__ = {'order_by': 'name'}
     id = Column(Integer, primary_key=True)
     name = Column(Text, unique=True)
     releases = relationship('Release', backref='package',
+                            collection_class=set,
                             cascade='all, delete-orphan', passive_deletes=True)
 
     def __init__(self, name, package_dir=None):
@@ -73,8 +75,7 @@ class Release(Base):
                      server_default=func.now())
     modified = Column(DateTime(timezone=True), nullable=False,
                       server_default=func.now(), onupdate=func.now())
-    files = relationship('File', backref='release')
-
+    files = relationship('File', backref='release', collection_class=set)
 
     def __repr__(self):
         if self.package:
@@ -162,16 +163,16 @@ def seed_packages(package_dir):
         package = Package(name=pkg)
         for rel in local_releases(package_dir, pkg):
             root, ext = os.path.splitext(rel.fullpath)
-            if ext in ['.md5']:
+            if ext in ['.md5', '.whl']:
                 continue
 
             release = releases.setdefault(rel.number,
                                           Release(version=rel.number))
             with open(rel.fullpath) as fo:
                 hashed_content = md5(fo .read()).hexdigest()
-            release.files.append(File(filename=rel.fullname,
-                                      location=rel.package_dir, md5=hashed_content))
+            release.files.add(File(filename=rel.fullname,
+                                   location=rel.package_dir, md5=hashed_content))
         for k, v in releases.items():
-            package.releases.append(v)
+            package.releases.add(v)
         packages.append(package)
     return packages
