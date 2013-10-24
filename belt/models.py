@@ -163,7 +163,7 @@ def seed_packages(package_dir):
         package = Package(name=pkg)
         for rel in local_releases(package_dir, pkg):
             root, ext = os.path.splitext(rel.fullpath)
-            if ext in ['.md5']:
+            if ext in ['.md5', '.whl']:
                 continue
 
             release = releases.setdefault(rel.number,

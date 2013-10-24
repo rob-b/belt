@@ -6,12 +6,12 @@ from belt.utils import pypi_url
 from belt.tests import create_package, patch
 from pyramid.httpexceptions import HTTPNotFound, HTTPServerError
 pypi_base_url = 'https://pypi.python.org/packages'
+from belt.views import download_package
 
 
 class TestDownloadPackage(object):
 
     def test_returns_404_if_package_not_on_pypi(self, db_session, dummy_request):
-        from belt.views import download_package
 
         url = pypi_url(pypi_base_url, 'source', 'flake8', 'flake8-2.0.tar.gz')
         dummy_request.path = url
@@ -26,7 +26,6 @@ class TestDownloadPackage(object):
                 download_package(dummy_request)
 
     def test_returns_500_when_server_error(self, db_session, http, dummy_request):
-        from belt.views import download_package
 
         url = pypi_url(pypi_base_url, 'source', 'flake8', 'flake8-2.0.tar.gz')
         dummy_request.path = url
@@ -42,7 +41,6 @@ class TestDownloadPackage(object):
 
     def test_obtains_missing_file_from_pypi(self, tmpdir, db_session,
                                             dummy_request):
-        from belt.views import download_package
 
         pkg = tmpdir.join('foo-1.2.tar.gz')
         package = create_package(pkg, content=u'Short lived')
@@ -65,7 +63,6 @@ class TestDownloadPackage(object):
 class TestRequestNonExistentPackage(object):
 
     def test_creates_package_record(self, db_session, dummy_request):
-        from belt.views import download_package
 
         url = pypi_url(pypi_base_url, 'source', 'foo', 'foo-1.2.tar.gz')
         dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
@@ -80,7 +77,6 @@ class TestRequestNonExistentPackage(object):
         db_session.query(models.Package).filter_by(name='foo').one()
 
     def test_creates_release_record(self, db_session, dummy_request):
-        from belt.views import download_package
 
         url = pypi_url(pypi_base_url, 'source', 'foo', 'foo-1.2.tar.gz')
         dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
@@ -95,7 +91,6 @@ class TestRequestNonExistentPackage(object):
         models.Release.for_package('foo', '1.2')
 
     def test_creates_file_record(self, db_session, dummy_request):
-        from belt.views import download_package
 
         url = pypi_url(pypi_base_url, 'source', 'foo', 'foo-1.2.tar.gz')
         dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
@@ -112,7 +107,6 @@ class TestRequestNonExistentPackage(object):
 class TestRequestNonExistentFile(object):
 
     def test_redirects_to_pypi(self, db_session, dummy_request):
-        from belt.views import download_package
 
         url = pypi_url(pypi_base_url, 'source', 'foo', 'foo-1.2.tar.gz')
         dummy_request.matchdict = {'package': 'foo', 'kind': 'source',
