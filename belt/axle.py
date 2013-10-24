@@ -7,6 +7,7 @@ import logging
 import urllib2
 import xmlrpclib
 import subprocess
+from hashlib import md5
 from wheel.install import WHEEL_INFO_RE
 
 
@@ -71,7 +72,6 @@ class WheelDestination(object):
 
 
 def copy_wheels_to_pypi(wheel_dir, local_pypi):
-
     for wheel in os.listdir(wheel_dir):
         match = WHEEL_INFO_RE(wheel)
         if match is None:
@@ -86,6 +86,51 @@ def copy_wheels_to_pypi(wheel_dir, local_pypi):
 
         mkdir_p(wheel_destination.path)
         shutil.copyfile(path_to_wheel, local_wheel)
+
+
+def get_all_wheels(wheel_dir):
+
+    class Whl(object):
+
+        def __init__(self, matchdict, wheel_dir, wheel):
+            self.__dict__.update(matchdict)
+            self.wheel_dir = wheel_dir
+            self.wheel = wheel
+
+        @property
+        def path(self):
+            if not hasattr(self, '_path'):
+                self._path = os.path.abspath(os.path.join(self.wheel_dir, self.wheel))
+            return self._path
+
+    for wheel in os.listdir(wheel_dir):
+        match = WHEEL_INFO_RE(wheel)
+        if match is None:
+            continue
+        yield Whl(match.groupdict(), wheel_dir, wheel)
+
+
+def add_generated_wheels_to_releases(session, wheel_dir, local_pypi):
+    from belt import models
+    from sqlalchemy.orm.exc import NoResultFound
+    releases = {}
+    for wheel in get_all_wheels(wheel_dir):
+        if wheel.name not in releases:
+            try:
+                releases[wheel.name] = models.Release.for_package(wheel.name, wheel.ver)
+            except NoResultFound:
+                continue
+        release = releases[wheel.name]
+
+        with open(wheel.path) as fo:
+            hashed_content = md5(fo .read()).hexdigest()
+
+        filename = os.path.basename(wheel.path)
+        rel_file = models.File(md5=hashed_content,
+                               location=local_pypi,
+                               filename=filename,
+                               kind=wheel.pyver)
+        release.files.add(rel_file)
 
 
 def build_wheels(local_pypi, wheel_dir):

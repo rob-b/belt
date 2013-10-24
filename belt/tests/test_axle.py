@@ -1,10 +1,10 @@
 import os
-import itertools
 import fudge
 import pytest
 import py.test
 from belt import models
 from sqlalchemy import exc
+from belt.axle import package_releases
 
 
 def test_move_wheels_to_pypi_dir(tmpdir):
@@ -58,6 +58,32 @@ def test_wheel_creates_files_with_underscores(tmpdir):
     assert os.path.exists(os.path.join(dirname, basename))
 
 
+def test_get_all_wheels(tmpdir):
+    from ..axle import get_all_wheels
+    wheel_dir = tmpdir.mkdir('local')
+    wheel = wheel_dir.join('foo_zle-12.4-py27-none-any.whl')
+    wheel.write('')
+    found_wheel, = list(get_all_wheels(str(wheel_dir)))
+    assert str(wheel) == found_wheel.path
+
+
+def test_add_generated_wheels_to_release(tmpdir, db_session):
+    from ..axle import add_generated_wheels_to_releases
+
+    wheel_dir = tmpdir.mkdir('local')
+    wheel = wheel_dir.join('belt-2.5-py27-none-any.whl')
+    wheel.write('')
+
+    pkg = models.Package(name=u'belt')
+    pkg.releases.add(models.Release(version=u'2.5'))
+    db_session.add(pkg)
+    add_generated_wheels_to_releases(db_session, str(wheel_dir), '/var')
+
+    release, = pkg.releases
+    file, = release.files
+    assert '/var/belt-2.5-py27-none-any.whl' == file.fullpath
+
+
 @pytest.mark.parametrize(('package', 'name_and_version'), [
     ('bump-0.1.0.tar.gz', ('bump', '0.1.0')),
     ('fudge-22.1.4.zip', ('fudge', '22.1.4')),
@@ -95,7 +121,6 @@ belt_pkg_data = [
 class TestGetReleaseData(object):
 
     def test_sets_release_version(self):
-        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').with_args('belt', '0.5')
                   .returns(belt_pkg_data)
@@ -105,7 +130,6 @@ class TestGetReleaseData(object):
         assert u'0.5' == release.version
 
     def test_sets_release_file_md5(self):
-        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').with_args('belt', '0.3')
                   .returns(belt_pkg_data)
@@ -120,7 +144,6 @@ class TestGetReleaseData(object):
                                                       release.files]
 
     def test_returns_list_of_releases_to_add_to_package(self, db_session):
-        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').returns(belt_pkg_data)
                   .expects('package_releases').returns(['0.1']))
@@ -133,7 +156,6 @@ class TestGetReleaseData(object):
         assert 1 == len(pkg.releases)
 
     def test_release_list_does_not_guarantee_uniqueness(self, db_session):
-        from ..axle import package_releases
         client = (fudge.Fake('client')
                   .expects('release_urls').returns(belt_pkg_data)
                   .expects('package_releases').returns(['0.1']))

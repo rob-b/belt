@@ -1,0 +1,8 @@
+.git/
+.ropeproject/
+.vagrant/
+tmp/
+eggs/
+build/
+.*\.pyc
+htmlcov/

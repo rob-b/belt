@@ -28,3 +28,7 @@
   - name: Add static files directory
     file: dest=/srv/static/$project_name state=directory owner=$user group=www-data
     tags: application
+
+  - name: Set permissions on /srv
+    file: dest=/srv state=directory owner=$user group=www-data recurse=yes
+    tags: application
