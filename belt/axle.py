@@ -126,8 +126,9 @@ def add_generated_wheels_to_releases(session, wheel_dir, local_pypi):
             hashed_content = md5(fo .read()).hexdigest()
 
         filename = os.path.basename(wheel.path)
+        location = os.path.join(local_pypi, release.package.name)
         rel_file = models.File(md5=hashed_content,
-                               location=local_pypi,
+                               location=location,
                                filename=filename,
                                kind=wheel.pyver)
         release.files.add(rel_file)

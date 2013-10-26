@@ -123,3 +123,33 @@ class TestGetPackageFromPypi(object):
 
         with py.test.raises(urllib2.URLError):
             get_package_from_pypi(url)
+
+
+class TestGetSearchNames(object):
+
+    def test_hyphen_returns_hyphen_and_underscore(self):
+        from ..utils import get_search_names
+        assert ['pytest-cov', 'pytest_cov'] == sorted(get_search_names('pytest-cov'))
+
+    def test_underscore_returns_hyphen_and_underscore(self):
+        from ..utils import get_search_names
+        assert ['pytest-cov', 'pytest_cov'] == sorted(get_search_names('pytest_cov'))
+
+    def test_no_underscore_or_hyphen_returns_one_item_list(self):
+        from ..utils import get_search_names
+        assert ['pytest'] == get_search_names('pytest')
+
+
+class TestReleaseValue(object):
+
+    def test_sets_number(self):
+        from ..values import ReleaseValue
+        assert '2.3' == ReleaseValue('foo-2.3', package_dir='n/a').number
+
+    def test_sets_name(self):
+        from ..values import ReleaseValue
+        assert 'foo' == ReleaseValue('foo-2.3', package_dir='n/a').name
+
+    def test_comparison_against_fullname(self):
+        from ..values import ReleaseValue
+        assert 'foo-2.3' == ReleaseValue('foo-2.3', package_dir='n/a')

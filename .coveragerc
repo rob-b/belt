@@ -1,3 +1,8 @@
 [run]
 branch = True
 omit = belt/__init__.py,belt/scripts/*,*/tests/*,belt/pshell.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
