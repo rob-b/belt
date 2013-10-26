@@ -16,26 +16,13 @@ class TestSeedPackages(object):
         rel_file, = rel.files
         assert expected == rel_file.fullpath
 
-    def test_sets_filename_for_whl_files(self, tmpdir):
+    def test_ignores_filename_for_whl_files(self, tmpdir):
         from ..models import seed_packages
         quux = tmpdir.mkdir('quux').join('quux-1.1-py27-none-any.whl')
         quux.write('')
 
         pkg, = seed_packages(str(tmpdir))
-        expected = os.path.join(str(tmpdir), 'quux',
-                                'quux-1.1-py27-none-any.whl')
-        rel, = pkg.releases
-        rel_file, = rel.files
-        assert expected == rel_file.fullpath
-
-    def test_detects_version_for_whl_files(self, tmpdir):
-        from ..models import seed_packages
-        quux = tmpdir.mkdir('quux').join('quux-1.1-py27-none-any.whl')
-        quux.write('')
-
-        pkg, = seed_packages(str(tmpdir))
-        rel, = pkg.releases
-        assert u'1.1' == rel.version
+        assert 0 == len(pkg.releases)
 
     def test_groups_releases(self, tmpdir):
         from ..models import seed_packages
@@ -50,7 +37,7 @@ class TestSeedPackages(object):
 
     def test_release_can_have_many_files(self, tmpdir):
         from ..models import seed_packages
-        quux = tmpdir.mkdir('quux').join('quux-1.1-py27-none-any.whl')
+        quux = tmpdir.mkdir('quux').join('quux-1.1.tgz')
         quux.write('')
 
         quux = tmpdir.join('quux', 'quux-1.1.zip')
