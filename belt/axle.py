@@ -88,7 +88,8 @@ def copy_wheels_to_pypi(wheel_dir, local_pypi):
         shutil.copyfile(path_to_wheel, local_wheel)
 
 
-def get_all_wheels(wheel_dir):
+def get_all_wheels(session, wheel_dir):
+    from belt import models
 
     class Whl(object):
 
@@ -102,8 +103,12 @@ def get_all_wheels(wheel_dir):
             if not hasattr(self, '_path'):
                 self._path = os.path.abspath(os.path.join(self.wheel_dir, self.wheel))
             return self._path
-
-    for wheel in os.listdir(wheel_dir):
+    wheels = (session.query(models.File)
+              .filter(models.File.filename.like("%whl")).all())
+    wheels = [wheel.filename for wheel in wheels if
+              os.path.exists(wheel.fullpath)]
+    wheels = set(os.listdir(wheel_dir)).difference(wheels)
+    for wheel in wheels:
         match = WHEEL_INFO_RE(wheel)
         if match is None:
             continue
@@ -114,16 +119,19 @@ def add_generated_wheels_to_releases(session, wheel_dir, local_pypi):
     from belt import models
     from sqlalchemy.orm.exc import NoResultFound
     releases = {}
-    for wheel in get_all_wheels(wheel_dir):
-        if wheel.name not in releases:
+    for wheel in get_all_wheels(session, wheel_dir):
+
+        # FIXME more name inconsistency
+        name = wheel.name.lower()
+        if name not in releases:
             try:
-                releases[wheel.name] = models.Release.for_package(wheel.name, wheel.ver)
+                releases[name] = models.Release.for_package(wheel.name, wheel.ver)
             except NoResultFound:
                 continue
-        release = releases[wheel.name]
+        release = releases[name]
 
         with open(wheel.path) as fo:
-            hashed_content = md5(fo .read()).hexdigest()
+            hashed_content = md5(fo.read()).hexdigest()
 
         filename = os.path.basename(wheel.path)
         location = os.path.join(local_pypi, release.package.name)
@@ -135,6 +143,7 @@ def add_generated_wheels_to_releases(session, wheel_dir, local_pypi):
 
 
 def build_wheels(local_pypi, wheel_dir):
+    from belt.utils import get_search_names
 
     built_wheels = []
     for wheel in os.listdir(wheel_dir):
@@ -143,7 +152,7 @@ def build_wheels(local_pypi, wheel_dir):
             continue
         tags = match.groupdict()
         # path_to_wheel = os.path.abspath(os.path.join(wheel_dir, wheel))
-        built_wheels.append(tags['namever'])
+        built_wheels.append(tags['namever'].lower())
 
     for package_dir in os.listdir(local_pypi):
         dir_ = os.path.join(local_pypi, package_dir)
@@ -154,10 +163,16 @@ def build_wheels(local_pypi, wheel_dir):
                 continue
             package_name, version = split_package_name(pkg)
             package_name = '{}-{}'.format(package_name, version)
-            if package_name in built_wheels:
-                continue
-            args = 'pip wheel --wheel-dir {} {}'.format(wheel_dir, name)
-            subprocess.call(args, shell=True)
+
+            # FIXME why are names inconsistent forcing us to check both
+            # variations?
+            options = get_search_names(package_name)
+            for opt in options:
+                if opt.lower() in built_wheels:
+                    break
+            else:
+                args = 'pip wheel --wheel-dir {} {}'.format(wheel_dir, name)
+                subprocess.call(args, shell=True)
 
 
 def get_xmlrpc_client():

@@ -5,6 +5,7 @@ import py.test
 from belt import models
 from sqlalchemy import exc
 from belt.axle import package_releases
+from hashlib import md5
 
 
 def test_move_wheels_to_pypi_dir(tmpdir):
@@ -58,12 +59,12 @@ def test_wheel_creates_files_with_underscores(tmpdir):
     assert os.path.exists(os.path.join(dirname, basename))
 
 
-def test_get_all_wheels(tmpdir):
+def test_get_all_wheels(db_session, tmpdir):
     from ..axle import get_all_wheels
     wheel_dir = tmpdir.mkdir('local')
     wheel = wheel_dir.join('foo_zle-12.4-py27-none-any.whl')
     wheel.write('')
-    found_wheel, = list(get_all_wheels(str(wheel_dir)))
+    found_wheel, = list(get_all_wheels(db_session, str(wheel_dir)))
     assert str(wheel) == found_wheel.path
 
 
@@ -82,6 +83,23 @@ def test_add_generated_wheels_to_release(tmpdir, db_session):
     release, = pkg.releases
     file, = release.files
     assert '/var/belt/belt-2.5-py27-none-any.whl' == file.fullpath
+
+
+def test_generated_wheels_have_correct_md5(tmpdir, db_session):
+    from ..axle import add_generated_wheels_to_releases
+
+    wheel_dir = tmpdir.mkdir('local')
+    wheel = wheel_dir.join('belt-2.5-py27-none-any.whl')
+    wheel.write('')
+
+    pkg = models.Package(name=u'belt')
+    pkg.releases.add(models.Release(version=u'2.5'))
+    db_session.add(pkg)
+    add_generated_wheels_to_releases(db_session, str(wheel_dir), '/var')
+
+    release, = pkg.releases
+    file, = release.files
+    assert md5(wheel.read()).hexdigest() == file.md5
 
 
 @pytest.mark.parametrize(('package', 'name_and_version'), [
