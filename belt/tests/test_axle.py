@@ -81,7 +81,7 @@ def test_add_generated_wheels_to_release(tmpdir, db_session):
 
     release, = pkg.releases
     file, = release.files
-    assert '/var/belt-2.5-py27-none-any.whl' == file.fullpath
+    assert '/var/belt/belt-2.5-py27-none-any.whl' == file.fullpath
 
 
 @pytest.mark.parametrize(('package', 'name_and_version'), [
