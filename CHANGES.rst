@@ -1,7 +1,7 @@
-0.7 (unreleased)
-----------------
+0.6.2 (2013-10-26)
+------------------
 
-- Nothing changed yet.
+- Fix bug in path created by `add_generated_wheels_to_releases`
 
 
 0.6.1 (2013-10-26)
