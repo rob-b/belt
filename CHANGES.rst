@@ -1,3 +1,9 @@
+0.6.1 (2013-10-26)
+------------------
+
+- Fix failing tests to reflect updated `seed_packages` command
+
+
 0.6 (2013-10-24)
 ----------------
 
