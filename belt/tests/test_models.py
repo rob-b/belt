@@ -1,5 +1,4 @@
 import os
-import pytest
 from belt import models
 
 
@@ -48,21 +47,9 @@ class TestSeedPackages(object):
         assert 2 == len(release.files)
 
 
-@pytest.fixture
-def session(request):
-    from sqlalchemy import create_engine
-    engine = create_engine('sqlite://', echo=False)
+class TestPackageByName(object):
 
-    from sqlalchemy.orm import scoped_session, sessionmaker
-    Session = scoped_session(sessionmaker())
-
-    models.Base.metadata.create_all(engine)
-    Session.configure(bind=engine)
-
-    connection = engine.connect()
-    trans = connection.begin()
-
-    def fin():
-        trans.rollback()
-    request.addfinalizer(fin)
-    return Session
+    def test_is_case_insensitive(self, db_session):
+        pkg = models.Package(name='Foo')
+        db_session.add(pkg)
+        assert 'Foo' == models.Package.by_name('foo').name
