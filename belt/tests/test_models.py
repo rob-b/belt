@@ -1,5 +1,4 @@
 import os
-import pytest
 from belt import models
 
 
@@ -48,21 +47,25 @@ class TestSeedPackages(object):
         assert 2 == len(release.files)
 
 
-@pytest.fixture
-def session(request):
-    from sqlalchemy import create_engine
-    engine = create_engine('sqlite://', echo=False)
+class TestPackageByName(object):
 
-    from sqlalchemy.orm import scoped_session, sessionmaker
-    Session = scoped_session(sessionmaker())
+    def test_is_case_insensitive(self, db_session):
+        pkg = models.Package(name='Foo')
+        db_session.add(pkg)
+        assert 'Foo' == models.Package.by_name('foo').name
 
-    models.Base.metadata.create_all(engine)
-    Session.configure(bind=engine)
 
-    connection = engine.connect()
-    trans = connection.begin()
+def test_uppercase_filename_not_found(db_session):
+    file = models.File(filename='UPPER',
+                       location='/tmp')
+    db_session.add(file)
+    db_session.flush()
+    assert None is db_session.query(models.File).filter_by(filename='UPPER').first()
 
-    def fin():
-        trans.rollback()
-    request.addfinalizer(fin)
-    return Session
+
+def test_filename_saved_as_lower_case(db_session):
+    file = models.File(filename='upper',
+                       location='/tmp')
+    db_session.add(file)
+    db_session.flush()
+    assert None is not db_session.query(models.File).filter_by(filename='upper').first()

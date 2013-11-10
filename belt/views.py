@@ -94,12 +94,13 @@ def package_version(request):
     # redirect to our local list, else use the pypi list for this package in
     # case it exists there. Unfortunately we cannot just directly download
     # from this point as we don't have the 'kind' value
-    package_dir = request.registry.settings['local_packages']
-    package_path = get_package(package_dir, name, version)
-    if not package_path.exists:
-        log.info(package_path.path + u' does not exist, retrieve from pypi')
+    try:
+        release = Release.for_package(name, version)
+    except exc.NoResultFound:
+        log.info(u'v{} of {} does not exist, retrieve from pypi'
+                 .format(version, name))
     else:
-        log.info(package_path.path + u' exists')
+        log.info(unicode(release) + u' exists')
     return HTTPNotFound()
 
 

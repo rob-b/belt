@@ -1,3 +1,9 @@
+0.7.0 (2013-11-10)
+------------------
+
+- Always make File.filename lowercase when saving
+
+
 0.6.2 (2013-10-26)
 ------------------
 
