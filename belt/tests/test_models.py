@@ -53,3 +53,19 @@ class TestPackageByName(object):
         pkg = models.Package(name='Foo')
         db_session.add(pkg)
         assert 'Foo' == models.Package.by_name('foo').name
+
+
+def test_uppercase_filename_not_found(db_session):
+    file = models.File(filename='UPPER',
+                       location='/tmp')
+    db_session.add(file)
+    db_session.flush()
+    assert None is db_session.query(models.File).filter_by(filename='UPPER').first()
+
+
+def test_filename_saved_as_lower_case(db_session):
+    file = models.File(filename='upper',
+                       location='/tmp')
+    db_session.add(file)
+    db_session.flush()
+    assert None is not db_session.query(models.File).filter_by(filename='upper').first()

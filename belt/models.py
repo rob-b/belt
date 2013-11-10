@@ -8,7 +8,7 @@ from zope.sqlalchemy import ZopeTransactionExtension
 
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy import (Column, Integer, Text, Boolean, ForeignKey, DateTime,
-                        func, UniqueConstraint, or_)
+                        func, UniqueConstraint, or_, event)
 from .utils import local_packages, local_releases, get_search_names
 from .axle import get_package_name, split_package_name
 
@@ -127,8 +127,13 @@ class File(Base):
                 .join(File.release, Release.package)
                 .filter(Release.version == version,
                         Package.name_insensitive == name,
-                        File.filename == filename)
+                        File.filename == filename.lower())
                 .one())
+
+
+@event.listens_for(File, 'before_insert')
+def lowercase_filename(mapper, connect, target):
+    target.filename = target.filename.lower()
 
 
 from sqlalchemy.exc import IntegrityError
@@ -162,7 +167,7 @@ def seed_packages(package_dir):
         releases = {}
         package = Package(name=pkg)
         for rel in local_releases(package_dir, pkg):
-            root, ext = os.path.splitext(rel.fullpath)
+            _, ext = os.path.splitext(rel.fullpath)
             if ext in ['.md5', '.whl']:
                 continue
 
