@@ -1,7 +1,7 @@
-0.6.3 (unreleased)
+0.7.0 (2013-11-10)
 ------------------
 
-- Nothing changed yet.
+- Always make File.filename lowercase when saving
 
 
 0.6.2 (2013-10-26)
